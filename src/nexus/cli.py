@@ -74,8 +74,24 @@ def run(
         "-d",
         help="Enable debug mode",
     ),
+    api: bool = typer.Option(
+        True,
+        "--api/--no-api",
+        help="Enable API server",
+    ),
 ) -> None:
     """Start the Nexus hub."""
+    import logging
+    from nexus.app import NexusApp
+
+    # Setup logging
+    log_level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
     rprint(Panel.fit(
         f"[bold blue]MoMo-Nexus[/bold blue] v{__version__}\n"
         "[dim]Central Communication Hub[/dim]",
@@ -90,8 +106,48 @@ def run(
     if debug:
         rprint("[yellow]Debug mode enabled[/yellow]")
 
-    # TODO: Start actual hub
-    rprint("\n[yellow]⚠️  Hub not yet implemented - coming in v0.3.0[/yellow]")
+    async def run_app() -> None:
+        nexus = NexusApp(cfg)
+
+        try:
+            await nexus.start()
+            rprint("[green]✓ Nexus started[/green]")
+
+            if api and cfg.server.enabled:
+                rprint(f"[dim]API Server:[/dim] http://{cfg.server.host}:{cfg.server.port}")
+
+                # Start API server
+                from nexus.api.app import NexusAPI
+                import uvicorn
+
+                api_app = NexusAPI(
+                    config=cfg,
+                    router=nexus.router,
+                    channel_manager=nexus.channel_manager,
+                    fleet_manager=nexus.fleet_manager,
+                )
+
+                rprint(f"[dim]API Key:[/dim] {api_app.api_key[:8]}...")
+
+                config_uvicorn = uvicorn.Config(
+                    app=api_app.app,
+                    host=cfg.server.host,
+                    port=cfg.server.port,
+                    log_level="warning",
+                )
+                server = uvicorn.Server(config_uvicorn)
+                await server.serve()
+            else:
+                # Run without API
+                await nexus._shutdown_event.wait()
+
+        except KeyboardInterrupt:
+            rprint("\n[yellow]Shutting down...[/yellow]")
+        finally:
+            await nexus.stop()
+            rprint("[green]✓ Nexus stopped[/green]")
+
+    asyncio.run(run_app())
 
 
 @app.command()
