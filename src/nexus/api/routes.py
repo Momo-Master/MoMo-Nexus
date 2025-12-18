@@ -1,0 +1,580 @@
+"""
+REST API Routes.
+
+All API endpoints for Nexus.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, Field
+
+from nexus._version import __version__
+from nexus.api.auth import require_auth
+from nexus.domain.enums import DeviceStatus, DeviceType, Priority
+
+router = APIRouter()
+
+
+# =============================================================================
+# Request/Response Models
+# =============================================================================
+
+
+class DeviceResponse(BaseModel):
+    """Device response model."""
+
+    id: str
+    type: str
+    name: Optional[str]
+    status: str
+    last_seen: Optional[str]
+    battery: Optional[int]
+    version: Optional[str]
+    channels: list[str]
+    location: Optional[dict]
+
+
+class MessageRequest(BaseModel):
+    """Message send request."""
+
+    dst: str = Field(..., description="Destination device ID")
+    type: str = Field(default="data", description="Message type")
+    priority: str = Field(default="normal", description="Priority level")
+    data: dict = Field(default_factory=dict, description="Message payload")
+    ack_required: bool = Field(default=False, description="Require acknowledgment")
+
+
+class CommandRequest(BaseModel):
+    """Command request."""
+
+    device_id: str = Field(..., description="Target device ID")
+    cmd: str = Field(..., description="Command name")
+    params: dict = Field(default_factory=dict, description="Command parameters")
+    timeout: int = Field(default=30, description="Timeout in seconds")
+    wait: bool = Field(default=True, description="Wait for result")
+
+
+class AlertResponse(BaseModel):
+    """Alert response model."""
+
+    id: str
+    type: str
+    severity: str
+    title: str
+    message: str
+    device_id: Optional[str]
+    timestamp: str
+    acknowledged: bool
+
+
+class StatusResponse(BaseModel):
+    """System status response."""
+
+    status: str
+    version: str
+    uptime: int
+    devices: dict
+    channels: dict
+    alerts: dict
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+
+def get_fleet_manager(request: Request):
+    """Get fleet manager from app state."""
+    manager = request.app.state.fleet_manager
+    if not manager:
+        raise HTTPException(status_code=503, detail="Fleet manager not initialized")
+    return manager
+
+
+def get_channel_manager(request: Request):
+    """Get channel manager from app state."""
+    manager = request.app.state.channel_manager
+    if not manager:
+        raise HTTPException(status_code=503, detail="Channel manager not initialized")
+    return manager
+
+
+def get_router(request: Request):
+    """Get message router from app state."""
+    router = request.app.state.router
+    if not router:
+        raise HTTPException(status_code=503, detail="Router not initialized")
+    return router
+
+
+# =============================================================================
+# System Endpoints
+# =============================================================================
+
+
+@router.get("/status", response_model=StatusResponse)
+async def get_status(request: Request, _: str = require_auth):
+    """Get system status."""
+    fleet = request.app.state.fleet_manager
+    channels = request.app.state.channel_manager
+
+    return {
+        "status": "running",
+        "version": __version__,
+        "uptime": 0,  # TODO: Track uptime
+        "devices": await fleet.registry.get_stats() if fleet else {},
+        "channels": channels.get_status() if channels else {},
+        "alerts": await fleet.alerts.get_stats() if fleet else {},
+    }
+
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint (no auth required)."""
+    return {"status": "ok", "version": __version__}
+
+
+@router.get("/stats")
+async def get_stats(request: Request, _: str = require_auth):
+    """Get detailed statistics."""
+    fleet = request.app.state.fleet_manager
+    if fleet:
+        return await fleet.get_stats()
+    return {}
+
+
+# =============================================================================
+# Device Endpoints
+# =============================================================================
+
+
+@router.get("/devices", response_model=list[DeviceResponse])
+async def list_devices(
+    request: Request,
+    status: Optional[str] = Query(None, description="Filter by status"),
+    type: Optional[str] = Query(None, description="Filter by device type"),
+    _: str = require_auth,
+):
+    """List all registered devices."""
+    fleet = get_fleet_manager(request)
+
+    if status:
+        devices = await fleet.registry.get_by_status(DeviceStatus(status))
+    elif type:
+        devices = await fleet.registry.get_by_type(DeviceType(type))
+    else:
+        devices = await fleet.registry.get_all()
+
+    return [
+        DeviceResponse(
+            id=d.id,
+            type=d.type.value if hasattr(d.type, "value") else str(d.type),
+            name=d.name,
+            status=d.status.value if hasattr(d.status, "value") else str(d.status),
+            last_seen=d.last_seen.isoformat() if d.last_seen else None,
+            battery=d.battery,
+            version=d.version,
+            channels=[c.value if hasattr(c, "value") else str(c) for c in d.channels],
+            location=d.location.model_dump() if d.location else None,
+        )
+        for d in devices
+    ]
+
+
+@router.get("/devices/{device_id}", response_model=DeviceResponse)
+async def get_device(
+    request: Request,
+    device_id: str,
+    _: str = require_auth,
+):
+    """Get device details."""
+    fleet = get_fleet_manager(request)
+    device = await fleet.registry.get(device_id)
+
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    return DeviceResponse(
+        id=device.id,
+        type=device.type.value if hasattr(device.type, "value") else str(device.type),
+        name=device.name,
+        status=device.status.value if hasattr(device.status, "value") else str(device.status),
+        last_seen=device.last_seen.isoformat() if device.last_seen else None,
+        battery=device.battery,
+        version=device.version,
+        channels=[c.value if hasattr(c, "value") else str(c) for c in device.channels],
+        location=device.location.model_dump() if device.location else None,
+    )
+
+
+@router.get("/devices/{device_id}/health")
+async def get_device_health(
+    request: Request,
+    device_id: str,
+    _: str = require_auth,
+):
+    """Get device health information."""
+    fleet = get_fleet_manager(request)
+    health = await fleet.monitor.get_health(device_id)
+
+    if not health:
+        raise HTTPException(status_code=404, detail="Device health not found")
+
+    return {
+        "device_id": health.device_id,
+        "health_score": health.health_score,
+        "last_seen": health.last_seen.isoformat() if health.last_seen else None,
+        "last_heartbeat": health.last_heartbeat.isoformat() if health.last_heartbeat else None,
+        "consecutive_misses": health.consecutive_misses,
+        "latency_ms": health.latency_ms,
+        "battery": health.battery,
+        "cpu": health.cpu,
+        "memory": health.memory,
+        "issues": health.issues,
+    }
+
+
+@router.delete("/devices/{device_id}")
+async def unregister_device(
+    request: Request,
+    device_id: str,
+    _: str = require_auth,
+):
+    """Unregister a device."""
+    fleet = get_fleet_manager(request)
+    result = await fleet.registry.unregister(device_id)
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    return {"status": "ok", "device_id": device_id}
+
+
+# =============================================================================
+# Command Endpoints
+# =============================================================================
+
+
+@router.post("/devices/{device_id}/command")
+async def send_command(
+    request: Request,
+    device_id: str,
+    cmd: str = Query(..., description="Command name"),
+    params: Optional[str] = Query(None, description="JSON params"),
+    wait: bool = Query(True, description="Wait for result"),
+    timeout: int = Query(30, description="Timeout seconds"),
+    _: str = require_auth,
+):
+    """Send command to a device."""
+    import json
+
+    fleet = get_fleet_manager(request)
+
+    # Parse params
+    cmd_params = {}
+    if params:
+        try:
+            cmd_params = json.loads(params)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid params JSON")
+
+    result = await fleet.send_command(
+        device_id=device_id,
+        cmd=cmd,
+        params=cmd_params,
+        wait=wait,
+        timeout=timeout,
+    )
+
+    return {
+        "command_id": result.command_id,
+        "device_id": result.device_id,
+        "success": result.success,
+        "pending": result.pending,
+        "error": result.error,
+        "data": result.data,
+        "duration_ms": result.duration_ms,
+    }
+
+
+@router.post("/command")
+async def send_command_body(
+    request: Request,
+    command: CommandRequest,
+    _: str = require_auth,
+):
+    """Send command to a device (POST body)."""
+    fleet = get_fleet_manager(request)
+
+    result = await fleet.send_command(
+        device_id=command.device_id,
+        cmd=command.cmd,
+        params=command.params,
+        wait=command.wait,
+        timeout=command.timeout,
+    )
+
+    return {
+        "command_id": result.command_id,
+        "device_id": result.device_id,
+        "success": result.success,
+        "pending": result.pending,
+        "error": result.error,
+        "data": result.data,
+    }
+
+
+@router.post("/broadcast")
+async def broadcast_command(
+    request: Request,
+    cmd: str = Query(..., description="Command name"),
+    device_type: Optional[str] = Query(None, description="Filter by device type"),
+    _: str = require_auth,
+):
+    """Broadcast command to multiple devices."""
+    fleet = get_fleet_manager(request)
+
+    results = await fleet.broadcast_command(
+        cmd=cmd,
+        device_type=device_type,
+    )
+
+    return {
+        "command": cmd,
+        "results": {
+            device_id: {
+                "success": r.success,
+                "error": r.error,
+            }
+            for device_id, r in results.items()
+        },
+    }
+
+
+# =============================================================================
+# Message Endpoints
+# =============================================================================
+
+
+@router.post("/messages")
+async def send_message(
+    request: Request,
+    message: MessageRequest,
+    _: str = require_auth,
+):
+    """Send a message to a device."""
+    from nexus.domain.enums import MessageType
+    from nexus.domain.models import Message
+
+    router = get_router(request)
+
+    msg = Message(
+        src="nexus",
+        dst=message.dst,
+        type=MessageType(message.type),
+        pri=Priority(message.priority),
+        ack_required=message.ack_required,
+        data=message.data,
+    )
+
+    result = await router.route(msg)
+
+    return {
+        "message_id": msg.id,
+        "success": result.success,
+        "channel": result.channel.value if result.channel else None,
+        "queued": result.queued,
+        "error": result.error,
+    }
+
+
+# =============================================================================
+# Alert Endpoints
+# =============================================================================
+
+
+@router.get("/alerts", response_model=list[AlertResponse])
+async def list_alerts(
+    request: Request,
+    limit: int = Query(100, le=1000),
+    unacknowledged: bool = Query(False),
+    severity: Optional[str] = Query(None),
+    device_id: Optional[str] = Query(None),
+    _: str = require_auth,
+):
+    """List alerts."""
+    from nexus.fleet.alerts import AlertSeverity
+
+    fleet = get_fleet_manager(request)
+
+    severity_filter = AlertSeverity(severity) if severity else None
+
+    alerts = await fleet.alerts.get_all(
+        limit=limit,
+        unacknowledged_only=unacknowledged,
+        severity=severity_filter,
+        device_id=device_id,
+    )
+
+    return [
+        AlertResponse(
+            id=a.id,
+            type=a.type.value,
+            severity=a.severity.value,
+            title=a.title,
+            message=a.message,
+            device_id=a.device_id,
+            timestamp=a.timestamp.isoformat(),
+            acknowledged=a.acknowledged,
+        )
+        for a in alerts
+    ]
+
+
+@router.get("/alerts/{alert_id}", response_model=AlertResponse)
+async def get_alert(
+    request: Request,
+    alert_id: str,
+    _: str = require_auth,
+):
+    """Get alert details."""
+    fleet = get_fleet_manager(request)
+    alert = await fleet.alerts.get(alert_id)
+
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    return AlertResponse(
+        id=alert.id,
+        type=alert.type.value,
+        severity=alert.severity.value,
+        title=alert.title,
+        message=alert.message,
+        device_id=alert.device_id,
+        timestamp=alert.timestamp.isoformat(),
+        acknowledged=alert.acknowledged,
+    )
+
+
+@router.post("/alerts/{alert_id}/ack")
+async def acknowledge_alert(
+    request: Request,
+    alert_id: str,
+    _: str = require_auth,
+):
+    """Acknowledge an alert."""
+    fleet = get_fleet_manager(request)
+    result = await fleet.alerts.acknowledge(alert_id, "api")
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    return {"status": "ok", "alert_id": alert_id}
+
+
+@router.post("/alerts/ack-all")
+async def acknowledge_all_alerts(
+    request: Request,
+    device_id: Optional[str] = Query(None),
+    severity: Optional[str] = Query(None),
+    _: str = require_auth,
+):
+    """Acknowledge all matching alerts."""
+    from nexus.fleet.alerts import AlertSeverity
+
+    fleet = get_fleet_manager(request)
+    severity_filter = AlertSeverity(severity) if severity else None
+
+    count = await fleet.alerts.acknowledge_all(
+        device_id=device_id,
+        severity=severity_filter,
+        acknowledged_by="api",
+    )
+
+    return {"status": "ok", "acknowledged": count}
+
+
+# =============================================================================
+# Channel Endpoints
+# =============================================================================
+
+
+@router.get("/channels")
+async def list_channels(request: Request, _: str = require_auth):
+    """List all channels and their status."""
+    channels = get_channel_manager(request)
+    return channels.get_status()
+
+
+@router.get("/channels/{channel_name}")
+async def get_channel(
+    request: Request,
+    channel_name: str,
+    _: str = require_auth,
+):
+    """Get channel details."""
+    from nexus.domain.enums import ChannelType
+
+    channels = get_channel_manager(request)
+
+    try:
+        channel_type = ChannelType(channel_name)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Channel not found")
+
+    channel = channels.get_channel(channel_type)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+
+    return {
+        "name": channel.name,
+        "type": channel.channel_type.value,
+        "status": channel.status.value,
+        "connected": channel.is_connected,
+        "available": channel.is_available(),
+        "metrics": {
+            "latency_ms": channel.metrics.latency_ms,
+            "messages_sent": channel.metrics.messages_sent,
+            "messages_received": channel.metrics.messages_received,
+        },
+    }
+
+
+@router.post("/channels/{channel_name}/restart")
+async def restart_channel(
+    request: Request,
+    channel_name: str,
+    _: str = require_auth,
+):
+    """Restart a channel."""
+    from nexus.domain.enums import ChannelType
+
+    channels = get_channel_manager(request)
+
+    try:
+        channel_type = ChannelType(channel_name)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Channel not found")
+
+    result = await channels.restart_channel(channel_type)
+
+    return {"status": "ok" if result else "failed", "channel": channel_name}
+
+
+# =============================================================================
+# Dashboard Data
+# =============================================================================
+
+
+@router.get("/dashboard")
+async def get_dashboard_data(request: Request, _: str = require_auth):
+    """Get data for dashboard display."""
+    fleet = request.app.state.fleet_manager
+    if fleet:
+        return await fleet.get_dashboard_data()
+    return {}
+
