@@ -181,6 +181,47 @@ class LoggingConfig(BaseModel):
 
 
 # =============================================================================
+# Security Configuration
+# =============================================================================
+
+
+class SecurityConfig(BaseModel):
+    """Security configuration."""
+
+    # Master key (hex-encoded, 64 chars = 32 bytes)
+    master_key: str | None = None  # Auto-generated if None
+
+    # Default security level: none, signed, encrypted
+    default_level: str = "signed"
+
+    # Replay protection
+    replay_window: int = 300  # seconds
+    max_nonces: int = 100000
+
+    # Key rotation
+    auto_rotate_keys: bool = False
+    key_rotation_days: int = 30
+
+
+# =============================================================================
+# Geo Configuration
+# =============================================================================
+
+
+class GeoConfig(BaseModel):
+    """GPS and geofencing configuration."""
+
+    # Location tracking
+    max_history: int = 1000  # Max points per device
+    min_distance: float = 5.0  # Minimum movement in meters
+    max_accuracy: float = 100.0  # Maximum acceptable accuracy
+
+    # Geofencing
+    default_alert_on_enter: bool = True
+    default_alert_on_exit: bool = True
+
+
+# =============================================================================
 # Main Configuration
 # =============================================================================
 
@@ -213,6 +254,8 @@ class NexusConfig(BaseSettings):
     server: ServerConfig = Field(default_factory=ServerConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    security: SecurityConfig = Field(default_factory=SecurityConfig)
+    geo: GeoConfig = Field(default_factory=GeoConfig)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "NexusConfig":

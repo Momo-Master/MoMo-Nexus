@@ -42,6 +42,14 @@ class EventType(str, Enum):
     ALERT_NEW = "alert.new"
     ALERT_ACKED = "alert.acked"
 
+    # Zone events
+    ZONE_ENTER = "zone.enter"
+    ZONE_EXIT = "zone.exit"
+    ZONE_DWELL = "zone.dwell"
+
+    # Channel registry
+    CHANNEL_REGISTERED = "channel.registered"
+
     # System events
     SYSTEM_STARTUP = "system.startup"
     SYSTEM_SHUTDOWN = "system.shutdown"

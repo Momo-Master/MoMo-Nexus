@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "momo-nexus"
-version = "0.6.0"
+version = "0.7.0"
 description = "Central Communication Hub for MoMo Ecosystem"
 readme = "README.md"
 license = "MIT"
