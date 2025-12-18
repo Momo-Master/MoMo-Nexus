@@ -78,10 +78,16 @@ class TestCellularChannel:
     @pytest.mark.asyncio
     async def test_connect_without_device(self) -> None:
         """Test connection fails gracefully without device."""
+        from nexus.channels.base import ChannelStatus
+
         channel = CellularChannel(serial_port="/dev/nonexistent")
 
-        with pytest.raises(Exception):
-            await channel.connect()
+        # Connection should fail gracefully (not raise)
+        await channel.connect()
+
+        # Channel should be in DOWN or DEGRADED state
+        assert channel.status in (ChannelStatus.DOWN, ChannelStatus.DEGRADED)
+        assert not channel.is_connected
 
     def test_modem_states(self) -> None:
         """Test modem state tracking."""

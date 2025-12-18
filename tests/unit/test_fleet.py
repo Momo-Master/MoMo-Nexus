@@ -125,8 +125,8 @@ class TestDeviceRegistry:
     @pytest.mark.asyncio
     async def test_get_stats(self, registry: DeviceRegistry) -> None:
         """Test getting statistics."""
-        await registry.register("dev-1", status=DeviceStatus.ONLINE)
-        await registry.register("dev-2", status=DeviceStatus.OFFLINE)
+        await registry.register("dev-1")
+        await registry.register("dev-2")
 
         await registry.set_status("dev-2", DeviceStatus.OFFLINE)
 

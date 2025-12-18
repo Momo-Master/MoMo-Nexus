@@ -38,7 +38,7 @@ class Zone(ABC):
 
     id: str
     name: str
-    zone_type: ZoneType
+    zone_type: ZoneType = field(default=ZoneType.CIRCLE)
     enabled: bool = True
     alert_on_enter: bool = True
     alert_on_exit: bool = True

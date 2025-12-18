@@ -246,15 +246,10 @@ class MessageQueue:
             self._backoff_max,
         )
 
-        item = QueueItem.from_message(message)
-        item.retry_count = message.retries
-        item.next_retry_at = datetime.now().replace(
-            microsecond=0
-        ) + asyncio.coroutine  # type: ignore
-
-        # This is a placeholder - in real implementation we'd use proper datetime arithmetic
         from datetime import timedelta
 
+        item = QueueItem.from_message(message)
+        item.retry_count = message.retries
         item.next_retry_at = datetime.now() + timedelta(seconds=delay)
 
         async with self._lock:

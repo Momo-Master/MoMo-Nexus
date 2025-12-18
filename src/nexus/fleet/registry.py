@@ -315,9 +315,12 @@ class DeviceRegistry:
                         DeviceStatus.LOST: EventType.DEVICE_LOST,
                     }.get(status, EventType.DEVICE_STATUS)
 
+                    old_val = old_status.value if hasattr(old_status, "value") else str(old_status)
+                    new_val = status.value if hasattr(status, "value") else str(status)
+
                     await self._event_bus.emit(
                         event_type,
-                        {"device_id": device_id, "old_status": old_status.value, "new_status": status.value},
+                        {"device_id": device_id, "old_status": old_val, "new_status": new_val},
                     )
 
             if channels is not None:
