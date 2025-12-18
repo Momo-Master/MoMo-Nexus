@@ -1,0 +1,93 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "momo-nexus"
+version = "0.2.0"
+description = "Central Communication Hub for MoMo Ecosystem"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "MoMo Team" }
+]
+keywords = [
+    "momo",
+    "nexus",
+    "communication",
+    "multi-channel",
+    "fleet-management",
+    "lora",
+    "mesh"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications",
+    "Topic :: System :: Networking",
+]
+dependencies = [
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "pyyaml>=6.0",
+    "aiosqlite>=0.19.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "structlog>=23.0.0",
+    "aiofiles>=23.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+recommended = [
+    "meshtastic>=2.0.0",
+    "bleak>=0.21.0",
+    "aiohttp>=3.9.0",
+    "uvicorn>=0.24.0",
+    "fastapi>=0.104.0",
+]
+all = [
+    "momo-nexus[dev,recommended]",
+]
+
+[project.scripts]
+nexus = "nexus.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/momo-team/momo-nexus"
+Documentation = "https://github.com/momo-team/momo-nexus/docs"
+Repository = "https://github.com/momo-team/momo-nexus"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nexus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+

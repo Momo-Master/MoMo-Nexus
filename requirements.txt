@@ -1,0 +1,19 @@
+# MoMo-Nexus Core Dependencies
+# Python 3.11+ required
+
+# Core
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+pyyaml>=6.0
+
+# Async
+aiosqlite>=0.19.0
+aiofiles>=23.0.0
+
+# CLI
+typer>=0.9.0
+rich>=13.0.0
+
+# Logging
+structlog>=23.0.0
+
