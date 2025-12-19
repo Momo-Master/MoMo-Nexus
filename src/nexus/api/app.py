@@ -103,9 +103,11 @@ class NexusAPI:
         from nexus.api.routes import router as api_router
         from nexus.api.websocket import router as ws_router
         from nexus.api.sync import sync_router
+        from nexus.api.cloud import cloud_router
 
         app.include_router(api_router, prefix="/api")
         app.include_router(sync_router, prefix="/api")
+        app.include_router(cloud_router, prefix="/api")
         app.include_router(ws_router)
 
         # Mount static files for dashboard
