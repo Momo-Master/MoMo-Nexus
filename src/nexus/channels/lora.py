@@ -10,10 +10,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
-from nexus.channels.base import BaseChannel, ChannelError, ConnectionError, SendError
+from nexus.channels.base import BaseChannel, ConnectionError, SendError
 from nexus.domain.enums import ChannelStatus, ChannelType
 from nexus.domain.models import Message
 

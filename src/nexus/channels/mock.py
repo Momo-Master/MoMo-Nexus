@@ -11,7 +11,7 @@ import logging
 import random
 from typing import Any
 
-from nexus.channels.base import BaseChannel, ChannelError
+from nexus.channels.base import BaseChannel
 from nexus.domain.enums import ChannelType
 from nexus.domain.models import Message
 

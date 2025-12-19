@@ -79,7 +79,7 @@ class Message(BaseModel):
         """Check if this message requires acknowledgment."""
         return self.ack_required and self.type not in (MessageType.ACK, MessageType.NACK)
 
-    def create_ack(self, success: bool = True) -> "Message":
+    def create_ack(self, success: bool = True) -> Message:
         """Create an ACK/NACK response for this message."""
         return Message(
             src="nexus",

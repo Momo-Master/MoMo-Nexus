@@ -9,19 +9,21 @@ Integrates with Nexus LoRaChannel for actual transmission.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Awaitable
+from typing import Any
 
 from nexus.swarm.protocol import (
-    SwarmMessage,
-    SwarmMessageType,
-    SwarmMessageBuilder,
-    EventCode,
-    CommandCode,
     AckStatus,
+    CommandCode,
+    EventCode,
     SequenceTracker,
+    SwarmMessage,
+    SwarmMessageBuilder,
+    SwarmMessageType,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,12 +44,12 @@ class BridgeStats:
     errors: int = 0
     last_heartbeat: float | None = None
     start_time: float = field(default_factory=time.time)
-    
+
     @property
     def uptime(self) -> int:
         """Get uptime in seconds."""
         return int(time.time() - self.start_time)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -69,7 +71,7 @@ class SwarmConfig:
     heartbeat_interval: int = 300  # seconds
     alerts_per_minute: int = 10
     sequence_window: int = 100
-    
+
     # Events to forward from devices
     forward_events: list[str] = field(default_factory=lambda: [
         "handshake_captured",
@@ -85,15 +87,15 @@ class SwarmConfig:
 class SwarmBridge:
     """
     Bridge between Nexus and LoRa mesh network.
-    
+
     This class handles:
     - Sending alerts and status updates via LoRa
     - Receiving and routing commands to field devices
     - Rate limiting and message queuing
     - Device tracking and heartbeat management
-    
+
     Note: Uses Nexus LoRaChannel for actual transmission.
-    
+
     Example:
         >>> from nexus.channels import LoRaChannel
         >>> lora = LoRaChannel(serial_port="/dev/ttyUSB0")
@@ -104,7 +106,7 @@ class SwarmBridge:
         ...     "bssid": "AA:BB:CC:DD:EE:FF"
         ... })
     """
-    
+
     def __init__(
         self,
         lora_channel: Any = None,  # LoRaChannel
@@ -112,7 +114,7 @@ class SwarmBridge:
     ):
         """
         Initialize swarm bridge.
-        
+
         Args:
             lora_channel: LoRaChannel instance for transmission
             config: Configuration object
@@ -122,112 +124,110 @@ class SwarmBridge:
         self.builder = SwarmMessageBuilder(self.config.device_id)
         self.seq_tracker = SequenceTracker(self.config.sequence_window)
         self.stats = BridgeStats()
-        
+
         # Command handlers
         self._command_handlers: dict[str, CommandHandler] = {}
-        
+
         # Event callbacks (for forwarding to fleet/dashboard)
         self._event_callbacks: list[EventCallback] = []
-        
+
         # Rate limiting
         self._alert_times: list[float] = []
-        
+
         # Known devices
         self._devices: dict[str, dict[str, Any]] = {}
-        
+
         # Tasks
         self._heartbeat_task: asyncio.Task[None] | None = None
         self._running = False
-    
+
     # ==================== Lifecycle ====================
-    
+
     async def start(self) -> bool:
         """
         Start the swarm bridge.
-        
+
         Returns:
             True if started successfully
         """
         if not self.config.enabled:
             logger.warning("Swarm bridge is disabled in config")
             return False
-        
+
         if self._lora is None:
             logger.error("No LoRa channel configured")
             return False
-        
+
         self._running = True
-        
+
         # Register message handler on LoRa channel
         if hasattr(self._lora, 'add_message_handler'):
             self._lora.add_message_handler(self._on_lora_message)
-        
+
         # Start heartbeat
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
-        
+
         # Send startup notification
         self.send_alert(EventCode.STARTUP, {"msg": "Nexus Swarm online"})
-        
+
         logger.info("Swarm bridge started")
         return True
-    
+
     async def stop(self) -> None:
         """Stop the swarm bridge."""
         self._running = False
-        
+
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
-        
+
         # Send shutdown notification
         self.send_alert(EventCode.SHUTDOWN, {"msg": "Nexus Swarm offline"})
-        
+
         logger.info("Swarm bridge stopped")
-    
+
     @property
     def is_running(self) -> bool:
         """Check if bridge is running."""
         return self._running
-    
+
     # ==================== Message Sending ====================
-    
+
     def _check_rate_limit(self) -> bool:
         """Check if we're within rate limits."""
         now = time.time()
-        
+
         # Remove old timestamps (older than 1 minute)
         self._alert_times = [t for t in self._alert_times if now - t < 60]
-        
+
         # Check limit
         if len(self._alert_times) >= self.config.alerts_per_minute:
             logger.warning("Rate limit exceeded, dropping message")
             return False
-        
+
         self._alert_times.append(now)
         return True
-    
+
     async def _send_swarm_message(self, msg: SwarmMessage) -> bool:
         """
         Send swarm message via LoRa channel.
-        
+
         Args:
             msg: SwarmMessage to send
-            
+
         Returns:
             True if sent successfully
         """
         if self._lora is None or not self._running:
             logger.error("Cannot send: LoRa not available")
             return False
-        
+
         try:
             # Convert to Nexus Message format
-            from nexus.domain.models import Message as NexusMessage
             from nexus.domain.enums import MessageType, Priority
-            
+            from nexus.domain.models import Message as NexusMessage
+
             nexus_msg = NexusMessage(
                 src=msg.source,
                 dst=msg.destination,
@@ -237,21 +237,21 @@ class SwarmBridge:
                     "swarm": msg.to_json(compact=True)
                 },
             )
-            
+
             # Send via LoRa
             success = await self._lora.send(nexus_msg)
-            
+
             if success:
                 self.stats.messages_sent += 1
                 logger.debug(f"Sent swarm: {msg.type.value}/{msg.data.get('evt', msg.data.get('cmd', ''))}")
-            
+
             return success
-            
+
         except Exception as e:
             logger.error(f"Swarm send failed: {e}")
             self.stats.errors += 1
             return False
-    
+
     def send_alert(
         self,
         event: EventCode | str,
@@ -260,26 +260,26 @@ class SwarmBridge:
     ) -> bool:
         """
         Send alert message to all listeners.
-        
+
         Args:
             event: Event code
             data: Event data
             destination: Optional destination device ID
-            
+
         Returns:
             True if sent successfully
         """
         if not self._check_rate_limit():
             return False
-        
+
         msg = self.builder.alert(event, data, destination)
-        
+
         # Fire and forget
         asyncio.create_task(self._send_swarm_message(msg))
         self.stats.alerts_sent += 1
-        
+
         return True
-    
+
     def send_command(
         self,
         cmd: CommandCode | str,
@@ -288,23 +288,23 @@ class SwarmBridge:
     ) -> bool:
         """
         Send command to a field device.
-        
+
         Args:
             cmd: Command code
             params: Command parameters
             destination: Target device ID
-            
+
         Returns:
             True if sent successfully
         """
         msg = self.builder.command(cmd, params, destination)
         asyncio.create_task(self._send_swarm_message(msg))
         return True
-    
+
     def send_status(self) -> bool:
         """
         Send status/heartbeat message.
-        
+
         Returns:
             True if sent successfully
         """
@@ -316,41 +316,41 @@ class SwarmBridge:
             aps_seen=len(self._devices),
             handshakes=0,
         )
-        
+
         self.stats.last_heartbeat = time.time()
         asyncio.create_task(self._send_swarm_message(msg))
         return True
-    
+
     # ==================== Message Receiving ====================
-    
+
     async def _on_lora_message(self, nexus_msg: Any) -> None:
         """Handle incoming message from LoRa channel."""
         self.stats.messages_received += 1
-        
+
         try:
             # Check if it's a swarm message
             if "swarm" not in nexus_msg.data:
                 return
-            
+
             swarm_json = nexus_msg.data["swarm"]
             msg = SwarmMessage.from_json(swarm_json)
-            
+
             if not msg:
-                logger.warning(f"Invalid swarm message format")
+                logger.warning("Invalid swarm message format")
                 return
-            
+
             # Check destination (if specified)
             if msg.destination and msg.destination != self.config.device_id:
                 return  # Not for us
-            
+
             # Check for replay attacks
             if not self.seq_tracker.is_valid(msg.source, msg.sequence):
                 logger.warning(f"Replay attack detected from {msg.source}")
                 return
-            
+
             # Update device tracking
             self._update_device(msg.source, msg)
-            
+
             # Handle by message type
             if msg.type == SwarmMessageType.CMD:
                 await self._handle_command(msg)
@@ -362,11 +362,11 @@ class SwarmBridge:
                 await self._handle_gps(msg)
             else:
                 logger.debug(f"Received {msg.type.value} from {msg.source}")
-                
+
         except Exception as e:
             logger.error(f"Swarm receive error: {e}")
             self.stats.errors += 1
-    
+
     def _update_device(self, device_id: str, msg: SwarmMessage) -> None:
         """Update device tracking info."""
         if device_id not in self._devices:
@@ -374,13 +374,13 @@ class SwarmBridge:
                 "first_seen": time.time(),
                 "message_count": 0,
             }
-        
+
         self._devices[device_id].update({
             "last_seen": time.time(),
             "last_message_type": msg.type.value,
             "message_count": self._devices[device_id]["message_count"] + 1,
         })
-        
+
         # Extract status data if available
         if msg.type == SwarmMessageType.STATUS:
             self._devices[device_id].update({
@@ -389,20 +389,20 @@ class SwarmBridge:
                 "gps": msg.data.get("gps"),
                 "uptime": msg.data.get("up"),
             })
-    
+
     async def _handle_command(self, msg: SwarmMessage) -> None:
         """Handle incoming command."""
         cmd = msg.data.get('cmd')
         params = {k: v for k, v in msg.data.items() if k != 'cmd'}
-        
+
         logger.info(f"Received command: {cmd} from {msg.source}")
         self.stats.commands_executed += 1
-        
+
         try:
             if cmd in self._command_handlers:
                 handler = self._command_handlers[cmd]
                 result = await handler(params)
-                
+
                 # Send ack
                 ack_status = AckStatus.ERROR if result.get('error') else AckStatus.OK
                 ack_msg = self.builder.ack(
@@ -420,88 +420,88 @@ class SwarmBridge:
                         await callback(cmd, params)
                     except Exception as e:
                         logger.error(f"Event callback error: {e}")
-                
+
         except Exception as e:
             logger.error(f"Command execution failed: {e}")
-    
+
     async def _handle_alert(self, msg: SwarmMessage) -> None:
         """Handle incoming alert from field device."""
         event = msg.data.get('evt', 'unknown')
         logger.info(f"Alert from {msg.source}: {event}")
-        
+
         # Forward to event callbacks
         for callback in self._event_callbacks:
             try:
                 await callback(event, msg.data)
             except Exception as e:
                 logger.error(f"Alert callback error: {e}")
-    
+
     async def _handle_status(self, msg: SwarmMessage) -> None:
         """Handle incoming status from field device."""
         logger.debug(f"Status from {msg.source}: bat={msg.data.get('bat')}%, temp={msg.data.get('temp')}°C")
-    
+
     async def _handle_gps(self, msg: SwarmMessage) -> None:
         """Handle incoming GPS update."""
         lat = msg.data.get('lat', 0)
         lon = msg.data.get('lon', 0)
         logger.debug(f"GPS from {msg.source}: ({lat}, {lon})")
-        
+
         # Update device location
         if msg.source in self._devices:
             self._devices[msg.source]["gps"] = [lat, lon]
-    
+
     # ==================== Command Registration ====================
-    
+
     def register_command(self, cmd: CommandCode | str, handler: CommandHandler) -> None:
         """
         Register a command handler.
-        
+
         Args:
             cmd: Command code to handle
             handler: Async function that takes params and returns result dict
         """
         key = cmd.value if isinstance(cmd, CommandCode) else cmd
         self._command_handlers[key] = handler
-    
+
     def on_event(self, callback: EventCallback) -> None:
         """
         Register callback for incoming events/alerts.
-        
+
         Args:
             callback: Async function(event_type, data)
         """
         self._event_callbacks.append(callback)
-    
+
     # ==================== Device Management ====================
-    
+
     def get_devices(self) -> dict[str, dict[str, Any]]:
         """Get all known devices."""
         return self._devices.copy()
-    
+
     def get_device(self, device_id: str) -> dict[str, Any] | None:
         """Get info for a specific device."""
         return self._devices.get(device_id)
-    
+
     # ==================== Heartbeat ====================
-    
+
     async def _heartbeat_loop(self) -> None:
         """Periodic heartbeat sender."""
         while self._running:
             try:
                 await asyncio.sleep(self.config.heartbeat_interval)
-                
+
                 if self._running:
                     self.send_status()
                     logger.debug("Swarm heartbeat sent")
-                    
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"Heartbeat error: {e}")
                 self.stats.errors += 1
-    
+
     # ==================== Helpers ====================
-    
+
     def _get_temperature(self) -> int:
         """Get CPU temperature in Celsius."""
         try:
@@ -509,14 +509,14 @@ class SwarmBridge:
                 return int(f.read().strip()) // 1000
         except (FileNotFoundError, PermissionError):
             return 0
-    
+
     # ==================== Context Manager ====================
-    
+
     async def __aenter__(self) -> SwarmBridge:
         """Async context manager entry."""
         await self.start()
         return self
-    
+
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.stop()

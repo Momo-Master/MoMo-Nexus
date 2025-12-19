@@ -6,10 +6,7 @@ All API endpoints for Nexus.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Optional
-
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from nexus._version import __version__
@@ -29,13 +26,13 @@ class DeviceResponse(BaseModel):
 
     id: str
     type: str
-    name: Optional[str]
+    name: str | None
     status: str
-    last_seen: Optional[str]
-    battery: Optional[int]
-    version: Optional[str]
+    last_seen: str | None
+    battery: int | None
+    version: str | None
     channels: list[str]
-    location: Optional[dict]
+    location: dict | None
 
 
 class MessageRequest(BaseModel):
@@ -66,7 +63,7 @@ class AlertResponse(BaseModel):
     severity: str
     title: str
     message: str
-    device_id: Optional[str]
+    device_id: str | None
     timestamp: str
     acknowledged: bool
 
@@ -155,8 +152,8 @@ async def get_stats(request: Request, _: str = require_auth):
 @router.get("/devices", response_model=list[DeviceResponse])
 async def list_devices(
     request: Request,
-    status: Optional[str] = Query(None, description="Filter by status"),
-    type: Optional[str] = Query(None, description="Filter by device type"),
+    status: str | None = Query(None, description="Filter by status"),
+    type: str | None = Query(None, description="Filter by device type"),
     _: str = require_auth,
 ):
     """List all registered devices."""
@@ -264,7 +261,7 @@ async def send_command(
     request: Request,
     device_id: str,
     cmd: str = Query(..., description="Command name"),
-    params: Optional[str] = Query(None, description="JSON params"),
+    params: str | None = Query(None, description="JSON params"),
     wait: bool = Query(True, description="Wait for result"),
     timeout: int = Query(30, description="Timeout seconds"),
     _: str = require_auth,
@@ -332,7 +329,7 @@ async def send_command_body(
 async def broadcast_command(
     request: Request,
     cmd: str = Query(..., description="Command name"),
-    device_type: Optional[str] = Query(None, description="Filter by device type"),
+    device_type: str | None = Query(None, description="Filter by device type"),
     _: str = require_auth,
 ):
     """Broadcast command to multiple devices."""
@@ -402,8 +399,8 @@ async def list_alerts(
     request: Request,
     limit: int = Query(100, le=1000),
     unacknowledged: bool = Query(False),
-    severity: Optional[str] = Query(None),
-    device_id: Optional[str] = Query(None),
+    severity: str | None = Query(None),
+    device_id: str | None = Query(None),
     _: str = require_auth,
 ):
     """List alerts."""
@@ -479,8 +476,8 @@ async def acknowledge_alert(
 @router.post("/alerts/ack-all")
 async def acknowledge_all_alerts(
     request: Request,
-    device_id: Optional[str] = Query(None),
-    severity: Optional[str] = Query(None),
+    device_id: str | None = Query(None),
+    severity: str | None = Query(None),
     _: str = require_auth,
 ):
     """Acknowledge all matching alerts."""

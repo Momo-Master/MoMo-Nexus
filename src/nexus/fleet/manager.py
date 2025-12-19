@@ -6,14 +6,12 @@ Central orchestration for all fleet management components.
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from datetime import datetime
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from nexus.config import NexusConfig, get_config
 from nexus.core.events import EventBus, EventType, get_event_bus
-from nexus.domain.enums import DeviceStatus, DeviceType, MessageType
+from nexus.domain.enums import DeviceStatus, MessageType
 from nexus.domain.models import Device, Message
 from nexus.fleet.alerts import AlertManager, AlertSeverity, AlertType
 from nexus.fleet.commands import CommandDispatcher
@@ -42,7 +40,7 @@ class FleetManager:
 
     def __init__(
         self,
-        router: "Router",
+        router: Router,
         config: NexusConfig | None = None,
         event_bus: EventBus | None = None,
     ) -> None:
@@ -152,7 +150,7 @@ class FleetManager:
         """Handle incoming message event."""
         # This is called from event bus, extract message info
         data = event.data if hasattr(event, "data") else {}
-        message_type = data.get("type")
+        data.get("type")
         source = data.get("source")
 
         if not source:

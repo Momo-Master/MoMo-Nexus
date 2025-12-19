@@ -12,17 +12,17 @@ Merged into: MoMo-Nexus v1.1.0
 :license: MIT
 """
 
-from nexus.swarm.protocol import (
-    SwarmMessage,
-    SwarmMessageType,
-    EventCode,
-    CommandCode,
-    AckStatus,
-    SwarmMessageBuilder,
-    SequenceTracker,
-)
-from nexus.swarm.bridge import SwarmBridge, BridgeStats
+from nexus.swarm.bridge import BridgeStats, SwarmBridge
 from nexus.swarm.manager import SwarmManager
+from nexus.swarm.protocol import (
+    AckStatus,
+    CommandCode,
+    EventCode,
+    SequenceTracker,
+    SwarmMessage,
+    SwarmMessageBuilder,
+    SwarmMessageType,
+)
 
 __all__ = [
     # Protocol

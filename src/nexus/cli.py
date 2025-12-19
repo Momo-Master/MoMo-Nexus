@@ -7,9 +7,7 @@ Typer-based command line interface.
 from __future__ import annotations
 
 import asyncio
-import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich import print as rprint
@@ -62,7 +60,7 @@ def main(
 
 @app.command()
 def run(
-    config: Optional[Path] = typer.Option(
+    config: Path | None = typer.Option(
         None,
         "--config",
         "-c",
@@ -82,6 +80,7 @@ def run(
 ) -> None:
     """Start the Nexus hub."""
     import logging
+
     from nexus.app import NexusApp
 
     # Setup logging
@@ -117,8 +116,9 @@ def run(
                 rprint(f"[dim]API Server:[/dim] http://{cfg.server.host}:{cfg.server.port}")
 
                 # Start API server
-                from nexus.api.app import NexusAPI
                 import uvicorn
+
+                from nexus.api.app import NexusAPI
 
                 api_app = NexusAPI(
                     config=cfg,
@@ -152,7 +152,7 @@ def run(
 
 @app.command()
 def status(
-    config: Optional[Path] = typer.Option(None, "--config", "-c"),
+    config: Path | None = typer.Option(None, "--config", "-c"),
 ) -> None:
     """Show Nexus status."""
     cfg = load_config(config)
@@ -203,7 +203,7 @@ def status(
 def config(
     show: bool = typer.Option(False, "--show", "-s", help="Show current config"),
     generate: bool = typer.Option(False, "--generate", "-g", help="Generate default config"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output path"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Output path"),
 ) -> None:
     """Manage configuration."""
     if generate:
@@ -224,7 +224,7 @@ def config(
 
 @app.command()
 def devices(
-    config: Optional[Path] = typer.Option(None, "--config", "-c"),
+    config: Path | None = typer.Option(None, "--config", "-c"),
 ) -> None:
     """List registered devices."""
     from nexus.infrastructure.database import DeviceStore
@@ -275,7 +275,7 @@ def devices(
 @app.command()
 def messages(
     count: int = typer.Option(20, "--count", "-n", help="Number of messages"),
-    config: Optional[Path] = typer.Option(None, "--config", "-c"),
+    config: Path | None = typer.Option(None, "--config", "-c"),
 ) -> None:
     """List recent messages."""
     from nexus.infrastructure.database import MessageStore
@@ -331,8 +331,8 @@ def test(
 ) -> None:
     """Test channel connectivity."""
     from nexus.channels.mock import MockChannel
-    from nexus.domain.models import Message
     from nexus.domain.enums import MessageType
+    from nexus.domain.models import Message
 
     async def run_test() -> None:
         rprint(f"[blue]Testing channel:[/blue] {channel}")
@@ -347,14 +347,14 @@ def test(
                 type=MessageType.PING,
             )
 
-            rprint(f"[dim]Sending test message...[/dim]")
+            rprint("[dim]Sending test message...[/dim]")
             success = await ch.send(msg)
 
             if success:
-                rprint(f"[green]✓ Message sent successfully[/green]")
+                rprint("[green]✓ Message sent successfully[/green]")
                 rprint(f"[dim]  Latency: {ch.metrics.latency_ms:.1f}ms[/dim]")
             else:
-                rprint(f"[red]✗ Message send failed[/red]")
+                rprint("[red]✗ Message send failed[/red]")
 
             await ch.disconnect()
         else:

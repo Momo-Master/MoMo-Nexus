@@ -1,6 +1,6 @@
 """Enumerations for MoMo-Nexus domain."""
 
-from enum import Enum, auto
+from enum import Enum
 
 
 class Priority(str, Enum):

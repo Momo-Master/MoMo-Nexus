@@ -8,15 +8,12 @@ Uses GATT protocol for reliable data transfer.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
-from uuid import UUID
 
-from nexus.channels.base import BaseChannel, ChannelError, ConnectionError, SendError
-from nexus.domain.enums import ChannelStatus, ChannelType
+from nexus.channels.base import BaseChannel, ConnectionError, SendError
+from nexus.domain.enums import ChannelType
 from nexus.domain.models import Message
 
 logger = logging.getLogger(__name__)
@@ -24,7 +21,6 @@ logger = logging.getLogger(__name__)
 # bleak import (optional)
 try:
     from bleak import BleakClient, BleakScanner
-    from bleak.backends.characteristic import BleakGATTCharacteristic
 
     BLEAK_AVAILABLE = True
 except ImportError:
@@ -142,7 +138,7 @@ class BLEChannel(BaseChannel):
 
             # Auto-connect to known devices
             if self._auto_connect:
-                for device_id, device in self._devices.items():
+                for _device_id, device in self._devices.items():
                     if device.name and "momo" in device.name.lower():
                         try:
                             await self.connect_device(device.address)

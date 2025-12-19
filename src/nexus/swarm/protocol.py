@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import json
 import time
-from enum import Enum
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 
@@ -33,27 +33,27 @@ class EventCode(str, Enum):
     NEW_AP = "new_ap"
     NEW_CLIENT = "new_cl"
     PASSWORD_CRACKED = "cracked"
-    
+
     # Attack Events
     EVIL_TWIN_CONNECT = "et_conn"
     EVIL_TWIN_CREDENTIAL = "et_cred"
     KARMA_CLIENT = "karma"
     EAP_CREDENTIAL = "eap"
     WPA3_EVENT = "wpa3"
-    
+
     # BLE Events
     BLE_DEVICE = "ble_dev"
     BLE_CONNECT = "ble_conn"
-    
+
     # GhostBridge Events
     GHOST_BEACON = "gh_beacon"
     GHOST_TUNNEL = "gh_tunnel"
     GHOST_EXFIL = "gh_exfil"
-    
+
     # Mimic Events
     MIMIC_TRIGGER = "mm_trig"
     MIMIC_INJECT = "mm_inject"
-    
+
     # System Events
     STARTUP = "startup"
     SHUTDOWN = "shutdown"
@@ -70,7 +70,7 @@ class CommandCode(str, Enum):
     SHELL = "shell"
     POWER = "power"
     CONFIG = "config"
-    
+
     # MoMo Commands
     DEAUTH = "deauth"
     EVIL_TWIN = "eviltwin"
@@ -78,12 +78,12 @@ class CommandCode(str, Enum):
     CAPTURE = "capture"
     CRACK = "crack"
     SCAN = "scan"
-    
+
     # GhostBridge Commands
     GHOST_START = "gh_start"
     GHOST_STOP = "gh_stop"
     GHOST_TUNNEL = "gh_tunnel"
-    
+
     # Mimic Commands
     MIMIC_ARM = "mm_arm"
     MIMIC_DISARM = "mm_disarm"
@@ -107,11 +107,11 @@ MAX_SWARM_MESSAGE_SIZE = 237
 class SwarmMessage:
     """
     MoMo-Swarm message format.
-    
+
     All messages follow this JSON structure for LoRa transmission.
     Designed for minimal size while maintaining protocol clarity.
     """
-    
+
     type: SwarmMessageType
     source: str
     data: dict[str, Any]
@@ -119,14 +119,14 @@ class SwarmMessage:
     destination: str | None = None
     timestamp: int = field(default_factory=lambda: int(time.time()))
     sequence: int = 0
-    
+
     def to_json(self, compact: bool = True) -> str:
         """
         Serialize message to JSON string.
-        
+
         Args:
             compact: Use compact JSON format (recommended for LoRa)
-            
+
         Returns:
             JSON string representation
         """
@@ -138,47 +138,47 @@ class SwarmMessage:
             "seq": self.sequence,
             "d": self.data
         }
-        
+
         if self.destination:
             msg["dst"] = self.destination
-        
+
         if compact:
             return json.dumps(msg, separators=(',', ':'))
         return json.dumps(msg)
-    
+
     def to_bytes(self) -> bytes:
         """Serialize message to bytes for transmission."""
         return self.to_json(compact=True).encode('utf-8')
-    
+
     @classmethod
     def from_json(cls, json_str: str) -> SwarmMessage | None:
         """
         Parse message from JSON string.
-        
+
         Args:
             json_str: JSON string to parse
-            
+
         Returns:
             SwarmMessage object or None if parsing fails
         """
         try:
             data = json.loads(json_str)
-            
+
             # Validate required fields
             required = ['v', 't', 'src', 'ts', 'seq', 'd']
             if not all(k in data for k in required):
                 return None
-            
+
             # Validate version
             if data['v'] != 1:
                 return None
-            
+
             # Parse message type
             try:
                 msg_type = SwarmMessageType(data['t'])
             except ValueError:
                 msg_type = data['t']  # type: ignore
-            
+
             return cls(
                 version=data['v'],
                 type=msg_type,
@@ -190,7 +190,7 @@ class SwarmMessage:
             )
         except (json.JSONDecodeError, KeyError, ValueError):
             return None
-    
+
     @classmethod
     def from_bytes(cls, data: bytes) -> SwarmMessage | None:
         """Parse message from bytes."""
@@ -198,11 +198,11 @@ class SwarmMessage:
             return cls.from_json(data.decode('utf-8'))
         except UnicodeDecodeError:
             return None
-    
+
     def size(self) -> int:
         """Get serialized message size in bytes."""
         return len(self.to_bytes())
-    
+
     def is_valid_size(self) -> bool:
         """Check if message fits within LoRa size limit."""
         return self.size() <= MAX_SWARM_MESSAGE_SIZE
@@ -211,26 +211,26 @@ class SwarmMessage:
 class SwarmMessageBuilder:
     """
     Builder class for constructing MoMo-Swarm messages.
-    
+
     Provides convenient methods for creating different message types
     with proper formatting and size management.
     """
-    
+
     def __init__(self, device_id: str):
         """
         Initialize message builder.
-        
+
         Args:
             device_id: This device's identifier (e.g., "momo-001", "nexus-hub")
         """
         self.device_id = device_id
         self._sequence = 0
-    
+
     def _next_seq(self) -> int:
         """Get next sequence number (wraps at 65535)."""
         self._sequence = (self._sequence + 1) % 65536
         return self._sequence
-    
+
     def alert(
         self,
         event: EventCode | str,
@@ -239,12 +239,12 @@ class SwarmMessageBuilder:
     ) -> SwarmMessage:
         """
         Create an alert message.
-        
+
         Args:
             event: Event code (e.g., EventCode.HANDSHAKE_CAPTURED)
             data: Event-specific data
             destination: Optional destination device ID
-            
+
         Returns:
             Alert message
         """
@@ -258,7 +258,7 @@ class SwarmMessageBuilder:
                 **data
             }
         )
-    
+
     def status(
         self,
         uptime: int,
@@ -272,7 +272,7 @@ class SwarmMessageBuilder:
     ) -> SwarmMessage:
         """
         Create a status/heartbeat message.
-        
+
         Args:
             uptime: Uptime in seconds
             battery: Battery percentage (0-100)
@@ -282,7 +282,7 @@ class SwarmMessageBuilder:
             handshakes: Number of handshakes captured
             detail: Include detailed info
             **extra: Additional status fields
-            
+
         Returns:
             Status message
         """
@@ -294,19 +294,19 @@ class SwarmMessageBuilder:
             "aps": aps_seen,
             "hs": handshakes
         }
-        
+
         if detail:
             data["detail"] = True
-        
+
         data.update(extra)
-        
+
         return SwarmMessage(
             type=SwarmMessageType.STATUS,
             source=self.device_id,
             sequence=self._next_seq(),
             data=data
         )
-    
+
     def command(
         self,
         cmd: CommandCode | str,
@@ -315,12 +315,12 @@ class SwarmMessageBuilder:
     ) -> SwarmMessage:
         """
         Create a command message.
-        
+
         Args:
             cmd: Command code
             params: Command parameters
             destination: Target device ID
-            
+
         Returns:
             Command message
         """
@@ -334,7 +334,7 @@ class SwarmMessageBuilder:
                 **params
             }
         )
-    
+
     def ack(
         self,
         ref_seq: int,
@@ -345,14 +345,14 @@ class SwarmMessageBuilder:
     ) -> SwarmMessage:
         """
         Create an acknowledgment message.
-        
+
         Args:
             ref_seq: Sequence number of the message being acknowledged
             status: Ack status
             destination: Original sender's device ID
             result: Optional result data
             error: Optional error message
-            
+
         Returns:
             Ack message
         """
@@ -360,12 +360,12 @@ class SwarmMessageBuilder:
             "ref": ref_seq,
             "status": status.value
         }
-        
+
         if result:
             data["result"] = result[:200]  # Limit result size
         if error:
             data["error"] = error[:100]  # Limit error size
-        
+
         return SwarmMessage(
             type=SwarmMessageType.ACK,
             source=self.device_id,
@@ -373,7 +373,7 @@ class SwarmMessageBuilder:
             sequence=self._next_seq(),
             data=data
         )
-    
+
     def gps(
         self,
         lat: float,
@@ -385,7 +385,7 @@ class SwarmMessageBuilder:
     ) -> SwarmMessage:
         """
         Create a GPS location message.
-        
+
         Args:
             lat: Latitude
             lon: Longitude
@@ -393,7 +393,7 @@ class SwarmMessageBuilder:
             speed: Speed in m/s
             hdop: Horizontal dilution of precision
             sats: Number of satellites
-            
+
         Returns:
             GPS message
         """
@@ -410,7 +410,7 @@ class SwarmMessageBuilder:
                 "sats": sats
             }
         )
-    
+
     def data_chunk(
         self,
         chunk_id: str,
@@ -422,7 +422,7 @@ class SwarmMessageBuilder:
     ) -> SwarmMessage:
         """
         Create a data exfiltration chunk message.
-        
+
         Args:
             chunk_id: Unique transfer ID
             name: File/data name
@@ -430,7 +430,7 @@ class SwarmMessageBuilder:
             total_chunks: Total number of chunks
             data: Base64 encoded chunk data
             destination: Destination device ID
-            
+
         Returns:
             Data message
         """
@@ -452,60 +452,60 @@ class SwarmMessageBuilder:
 class SequenceTracker:
     """
     Track message sequence numbers to prevent replay attacks.
-    
+
     Uses a sliding window approach to efficiently detect
     replay attempts while allowing for out-of-order delivery.
     """
-    
+
     def __init__(self, window_size: int = 100):
         """
         Initialize sequence tracker.
-        
+
         Args:
             window_size: Size of sequence window for replay detection
         """
         self.window_size = window_size
         self._last_seq: dict[str, int] = {}
         self._seen: dict[str, list[int]] = {}
-    
+
     def is_valid(self, source: str, sequence: int) -> bool:
         """
         Check if sequence number is valid (not a replay).
-        
+
         Args:
             source: Source device ID
             sequence: Sequence number to check
-            
+
         Returns:
             True if valid, False if replay detected
         """
         last = self._last_seq.get(source, -1)
-        
+
         # Handle wrap-around (65535 → 0)
         if sequence > last or (last > 60000 and sequence < 5000):
             self._last_seq[source] = sequence
-            
+
             # Track recent sequences
             if source not in self._seen:
                 self._seen[source] = []
             self._seen[source].append(sequence)
-            
+
             # Trim old sequences
             if len(self._seen[source]) > self.window_size:
                 self._seen[source] = self._seen[source][-self.window_size:]
-            
+
             return True
-        
+
         # Check if we've seen this exact sequence recently
         if source in self._seen and sequence in self._seen[source]:
             return False
-        
+
         return False
-    
+
     def reset(self, source: str | None = None) -> None:
         """
         Reset sequence tracking.
-        
+
         Args:
             source: Specific source to reset, or None for all
         """
@@ -515,7 +515,7 @@ class SequenceTracker:
         else:
             self._last_seq.clear()
             self._seen.clear()
-    
+
     def get_stats(self) -> dict[str, Any]:
         """Get tracking statistics."""
         return {

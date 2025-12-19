@@ -9,12 +9,12 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Type
+from typing import Any
 
 from nexus.config import NexusConfig, get_config
 from nexus.core.events import EventBus, get_event_bus
-from nexus.plugins.base import Plugin, PluginMetadata, PluginState
-from nexus.plugins.hooks import HookRegistry, HookType, get_hook_registry
+from nexus.plugins.base import Plugin
+from nexus.plugins.hooks import HookRegistry, get_hook_registry
 from nexus.plugins.loader import PluginLoader
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class PluginManager:
 
     async def load(
         self,
-        plugin_class: Type[Plugin],
+        plugin_class: type[Plugin],
         config: dict[str, Any] | None = None,
     ) -> Plugin | None:
         """

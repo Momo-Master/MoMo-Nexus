@@ -8,15 +8,15 @@ Supports SIM7600, Quectel, and other AT command based modems.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
 from typing import Any
 
 from nexus.channels.base import BaseChannel, ChannelError, ConnectionError, SendError
-from nexus.domain.enums import ChannelStatus, ChannelType
+from nexus.domain.enums import ChannelType
 from nexus.domain.models import Message
 
 logger = logging.getLogger(__name__)
@@ -207,9 +207,8 @@ class CellularChannel(BaseChannel):
 
         response = await loop.run_in_executor(None, send_and_receive)
 
-        if expect_ok and "OK" not in response:
-            if any("ERROR" in line for line in response):
-                raise ChannelError(f"AT command failed: {response}")
+        if expect_ok and "OK" not in response and any("ERROR" in line for line in response):
+            raise ChannelError(f"AT command failed: {response}")
 
         return response
 
@@ -315,10 +314,8 @@ class CellularChannel(BaseChannel):
         try:
             if self._serial:
                 # Deactivate PDP context
-                try:
+                with contextlib.suppress(Exception):
                     await self._send_at("+CIPSHUT", timeout=10, expect_ok=False)
-                except Exception:
-                    pass
 
                 self._serial.close()
                 self._serial = None
@@ -443,10 +440,7 @@ class CellularChannel(BaseChannel):
                 ber = int(parts[1].strip()) if len(parts) > 1 else 99
 
                 # Convert to dBm
-                if rssi_raw == 99:
-                    rssi = -999
-                else:
-                    rssi = -113 + (rssi_raw * 2)
+                rssi = -999 if rssi_raw == 99 else -113 + rssi_raw * 2
 
                 self._signal = SignalQuality(rssi=rssi, ber=ber)
 
@@ -532,10 +526,8 @@ class CellularChannel(BaseChannel):
         except Exception as e:
             logger.error(f"HTTP POST failed: {e}")
             # Try to clean up
-            try:
+            with contextlib.suppress(Exception):
                 await self._send_at("+HTTPTERM", expect_ok=False)
-            except Exception:
-                pass
             return False
 
     # =========================================================================

@@ -58,7 +58,7 @@ class SecureEnvelope:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SecureEnvelope":
+    def from_dict(cls, data: dict[str, Any]) -> SecureEnvelope:
         """Create from dictionary."""
         return cls(
             ver=data.get("ver", 1),
@@ -74,7 +74,7 @@ class SecureEnvelope:
         return json.dumps(self.to_dict(), separators=(",", ":"))
 
     @classmethod
-    def from_json(cls, data: str) -> "SecureEnvelope":
+    def from_json(cls, data: str) -> SecureEnvelope:
         """Deserialize from JSON."""
         return cls.from_dict(json.loads(data))
 
@@ -83,7 +83,7 @@ class SecureEnvelope:
         return self.to_json().encode("utf-8")
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> "SecureEnvelope":
+    def from_bytes(cls, data: bytes) -> SecureEnvelope:
         """Deserialize from bytes."""
         return cls.from_json(data.decode("utf-8"))
 
@@ -170,9 +170,8 @@ class EnvelopeBuilder:
             ValueError: If verification fails
         """
         # Verify signature
-        if verify and envelope.lvl != SecurityLevel.NONE:
-            if not self.verify(envelope):
-                raise ValueError("Envelope signature verification failed")
+        if verify and envelope.lvl != SecurityLevel.NONE and not self.verify(envelope):
+            raise ValueError("Envelope signature verification failed")
 
         # Decrypt if needed
         if envelope.lvl == SecurityLevel.ENCRYPTED and self._crypto:
@@ -203,6 +202,7 @@ class EnvelopeBuilder:
             return False
 
         from base64 import b64decode
+
         from nexus.security.hmac import AuthenticatedMessage
 
         sig_data = self._signing_data(envelope)
@@ -221,7 +221,7 @@ class EnvelopeBuilder:
         return (
             f"{envelope.ver}:{envelope.lvl.value}:{envelope.ts}:{envelope.nonce}:"
             f"{envelope.payload}"
-        ).encode("utf-8")
+        ).encode()
 
 
 def wrap_message(

@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Tuple
+from typing import Any
 
 # Earth's radius in meters
 EARTH_RADIUS = 6371000
@@ -35,7 +35,7 @@ class GPSCoordinate:
         if not -180 <= self.lon <= 180:
             raise ValueError(f"Longitude must be between -180 and 180: {self.lon}")
 
-    def to_tuple(self) -> Tuple[float, float]:
+    def to_tuple(self) -> tuple[float, float]:
         """Convert to (lat, lon) tuple."""
         return (self.lat, self.lon)
 
@@ -44,16 +44,16 @@ class GPSCoordinate:
         return {"lat": self.lat, "lon": self.lon}
 
     @classmethod
-    def from_tuple(cls, coords: Tuple[float, float]) -> "GPSCoordinate":
+    def from_tuple(cls, coords: tuple[float, float]) -> GPSCoordinate:
         """Create from (lat, lon) tuple."""
         return cls(lat=coords[0], lon=coords[1])
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "GPSCoordinate":
+    def from_dict(cls, data: dict[str, Any]) -> GPSCoordinate:
         """Create from dictionary."""
         return cls(lat=data["lat"], lon=data["lon"])
 
-    def distance_to(self, other: "GPSCoordinate") -> float:
+    def distance_to(self, other: GPSCoordinate) -> float:
         """
         Calculate distance to another coordinate in meters.
 
@@ -61,7 +61,7 @@ class GPSCoordinate:
         """
         return distance_haversine(self, other)
 
-    def bearing_to(self, other: "GPSCoordinate") -> float:
+    def bearing_to(self, other: GPSCoordinate) -> float:
         """
         Calculate initial bearing to another coordinate.
 
@@ -69,7 +69,7 @@ class GPSCoordinate:
         """
         return bearing(self, other)
 
-    def destination(self, distance: float, bearing_deg: float) -> "GPSCoordinate":
+    def destination(self, distance: float, bearing_deg: float) -> GPSCoordinate:
         """
         Calculate destination point given distance and bearing.
 
@@ -110,7 +110,7 @@ class Location(GPSCoordinate):
         return d
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Location":
+    def from_dict(cls, data: dict[str, Any]) -> Location:
         """Create from dictionary."""
         return cls(
             lat=data["lat"],
@@ -170,7 +170,7 @@ class LocationFix:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "LocationFix":
+    def from_dict(cls, data: dict[str, Any]) -> LocationFix:
         """Create from dictionary."""
         return cls(
             location=Location.from_dict(data["location"]),
@@ -309,7 +309,7 @@ def midpoint(p1: GPSCoordinate, p2: GPSCoordinate) -> GPSCoordinate:
 def bounding_box(
     center: GPSCoordinate,
     radius: float,
-) -> Tuple[GPSCoordinate, GPSCoordinate]:
+) -> tuple[GPSCoordinate, GPSCoordinate]:
     """
     Calculate bounding box for a circle.
 

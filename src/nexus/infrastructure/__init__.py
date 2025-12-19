@@ -1,6 +1,6 @@
 """Infrastructure layer - database, storage, external services."""
 
-from nexus.infrastructure.database import MessageStore, DeviceStore
+from nexus.infrastructure.database import DeviceStore, MessageStore
 
 __all__ = [
     "MessageStore",

@@ -11,8 +11,8 @@ Interfaces for cloud services:
 :license: MIT
 """
 
-from nexus.cloud.hashcat import HashcatCloudClient, CrackJob, CrackResult
 from nexus.cloud.evilginx import EvilginxClient, Phishlet, Session
+from nexus.cloud.hashcat import CrackJob, CrackResult, HashcatCloudClient
 from nexus.cloud.manager import CloudManager
 
 __all__ = [

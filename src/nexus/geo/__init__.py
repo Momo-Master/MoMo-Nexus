@@ -4,19 +4,19 @@ from nexus.geo.location import (
     GPSCoordinate,
     Location,
     LocationFix,
-    distance_haversine,
     bearing,
     destination_point,
+    distance_haversine,
 )
+from nexus.geo.manager import GeoManager, ZoneEvent, ZoneEventType
+from nexus.geo.tracker import LocationTracker, TrackPoint
 from nexus.geo.zones import (
-    Zone,
-    ZoneType,
     CircleZone,
     PolygonZone,
     RectangleZone,
+    Zone,
+    ZoneType,
 )
-from nexus.geo.tracker import LocationTracker, TrackPoint
-from nexus.geo.manager import GeoManager, ZoneEvent, ZoneEventType
 
 __all__ = [
     # Location

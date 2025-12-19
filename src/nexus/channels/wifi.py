@@ -15,8 +15,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from nexus.channels.base import BaseChannel, ChannelError, ConnectionError, SendError
-from nexus.domain.enums import ChannelStatus, ChannelType
+from nexus.channels.base import BaseChannel, ConnectionError, SendError
+from nexus.domain.enums import ChannelType
 from nexus.domain.models import Message
 
 logger = logging.getLogger(__name__)
@@ -467,10 +467,9 @@ class WiFiChannel(BaseChannel):
                 return False
 
             # Check WebSocket if configured
-            if self._websocket:
-                if self._websocket.closed:
-                    # Try to reconnect
-                    await self._connect_websocket()
+            if self._websocket and self._websocket.closed:
+                # Try to reconnect
+                await self._connect_websocket()
 
             # Ping API endpoint if configured
             if self._api_endpoint and self._session:

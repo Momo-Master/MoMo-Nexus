@@ -1,6 +1,6 @@
 """Core routing and queue functionality."""
 
-from nexus.core.events import EventBus, Event, get_event_bus
+from nexus.core.events import Event, EventBus, get_event_bus
 from nexus.core.queue import MessageQueue, PriorityQueue
 from nexus.core.router import Router, RoutingError
 

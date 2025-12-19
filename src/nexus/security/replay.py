@@ -7,11 +7,11 @@ Prevents message replay attacks using nonce tracking.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -88,10 +88,8 @@ class ReplayGuard:
 
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
             self._cleanup_task = None
 
         logger.debug("Replay guard stopped")
@@ -129,15 +127,12 @@ class ReplayGuard:
 
         # Check for future timestamps (clock skew tolerance: 30s)
         if timestamp > now + 30:
-            logger.warning(f"Nonce rejected: timestamp in future")
+            logger.warning("Nonce rejected: timestamp in future")
             return False
 
         async with self._lock:
             # Build composite key for device isolation
-            if device_id:
-                key = f"{device_id}:{nonce}"
-            else:
-                key = nonce
+            key = f"{device_id}:{nonce}" if device_id else nonce
 
             # Check if nonce was seen
             if key in self._nonces:

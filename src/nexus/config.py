@@ -7,14 +7,12 @@ Pydantic-based configuration with YAML support.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from nexus.domain.enums import ChannelType, Priority
-
 
 # =============================================================================
 # Channel Configurations
@@ -258,7 +256,7 @@ class NexusConfig(BaseSettings):
     geo: GeoConfig = Field(default_factory=GeoConfig)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "NexusConfig":
+    def from_yaml(cls, path: str | Path) -> NexusConfig:
         """Load configuration from YAML file."""
         path = Path(path)
         if not path.exists():

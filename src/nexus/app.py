@@ -14,15 +14,15 @@ from datetime import datetime
 from typing import Any
 
 from nexus._version import __version__
-from nexus.config import NexusConfig, load_config
-from nexus.core.events import EventBus, EventType, get_event_bus
-from nexus.core.router import Router
 from nexus.channels.manager import ChannelManager
+from nexus.config import NexusConfig, load_config
+from nexus.core.events import EventType, get_event_bus
+from nexus.core.router import Router
 from nexus.fleet.manager import FleetManager
-from nexus.security.manager import SecurityManager
 from nexus.geo.manager import GeoManager
-from nexus.plugins.manager import PluginManager
 from nexus.infrastructure.database import DeviceStore, MessageStore
+from nexus.plugins.manager import PluginManager
+from nexus.security.manager import SecurityManager
 
 logger = logging.getLogger(__name__)
 

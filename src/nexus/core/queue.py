@@ -34,7 +34,7 @@ class QueueItem:
     next_retry_at: datetime | None = field(default=None, compare=False)
 
     @classmethod
-    def from_message(cls, message: Message) -> "QueueItem":
+    def from_message(cls, message: Message) -> QueueItem:
         """Create queue item from message."""
         # Priority ordering: CRITICAL=0, HIGH=1, NORMAL=2, LOW=3, BULK=4
         priority_map = {
@@ -102,7 +102,7 @@ class PriorityQueue:
                 await asyncio.wait_for(self._not_empty.wait(), timeout)
             else:
                 await self._not_empty.wait()
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None
 
         async with self._lock:

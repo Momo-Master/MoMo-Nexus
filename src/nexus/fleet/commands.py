@@ -11,12 +11,12 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from nexus.config import NexusConfig, get_config
-from nexus.core.events import EventBus, EventType, get_event_bus
+from nexus.core.events import EventBus, get_event_bus
 from nexus.domain.enums import MessageType, Priority
-from nexus.domain.models import Command, CommandResult, Message, generate_id
+from nexus.domain.models import Command, CommandResult, Message
 
 if TYPE_CHECKING:
     from nexus.core.router import Router
@@ -63,8 +63,8 @@ class CommandDispatcher:
 
     def __init__(
         self,
-        router: "Router",
-        registry: "DeviceRegistry",
+        router: Router,
+        registry: DeviceRegistry,
         config: NexusConfig | None = None,
         event_bus: EventBus | None = None,
     ) -> None:
@@ -200,7 +200,7 @@ class CommandDispatcher:
                 )
                 return result
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pending.status = CommandStatus.TIMEOUT
                 pending.result = CommandResult(
                     command_id=command.id,

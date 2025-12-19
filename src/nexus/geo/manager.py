@@ -7,17 +7,19 @@ Central orchestration for GPS tracking and geofencing.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Coroutine, Dict, List
+from typing import Any
 
 from nexus.config import NexusConfig, get_config
 from nexus.core.events import EventBus, EventType, get_event_bus
-from nexus.geo.location import GPSCoordinate, Location, LocationFix
+from nexus.geo.location import GPSCoordinate, Location
 from nexus.geo.tracker import LocationTracker, TrackPoint
-from nexus.geo.zones import Zone, CircleZone, PolygonZone, RectangleZone
+from nexus.geo.zones import Zone
 
 logger = logging.getLogger(__name__)
 
@@ -95,14 +97,14 @@ class GeoManager:
         )
 
         # Zones
-        self._zones: Dict[str, Zone] = {}
+        self._zones: dict[str, Zone] = {}
         self._zone_lock = asyncio.Lock()
 
         # Device zone state: device_id -> set of zone_ids currently in
-        self._device_zones: Dict[str, set[str]] = {}
+        self._device_zones: dict[str, set[str]] = {}
 
         # Zone event handlers
-        self._handlers: List[ZoneEventHandler] = []
+        self._handlers: list[ZoneEventHandler] = []
 
         self._running = False
 
@@ -144,7 +146,7 @@ class GeoManager:
         speed: float | None = None,
         heading: float | None = None,
         timestamp: datetime | None = None,
-    ) -> List[ZoneEvent]:
+    ) -> list[ZoneEvent]:
         """
         Update device location and check geofences.
 
@@ -185,7 +187,7 @@ class GeoManager:
         self,
         device_id: str,
         data: dict[str, Any],
-    ) -> List[ZoneEvent]:
+    ) -> list[ZoneEvent]:
         """
         Update location from message data.
 
@@ -237,7 +239,7 @@ class GeoManager:
         async with self._zone_lock:
             return self._zones.get(zone_id)
 
-    async def get_all_zones(self) -> List[Zone]:
+    async def get_all_zones(self) -> list[Zone]:
         """Get all zones."""
         async with self._zone_lock:
             return list(self._zones.values())
@@ -269,7 +271,7 @@ class GeoManager:
         device_id: str,
         location: Location,
         timestamp: datetime | None = None,
-    ) -> List[ZoneEvent]:
+    ) -> list[ZoneEvent]:
         """Check all geofences for a device location."""
         events = []
         timestamp = timestamp or datetime.now()
@@ -328,7 +330,7 @@ class GeoManager:
     async def check_zones(
         self,
         location: GPSCoordinate,
-    ) -> List[Zone]:
+    ) -> list[Zone]:
         """
         Check which zones contain a location.
 
@@ -347,7 +349,7 @@ class GeoManager:
 
         return result
 
-    async def get_device_zones(self, device_id: str) -> List[Zone]:
+    async def get_device_zones(self, device_id: str) -> list[Zone]:
         """Get zones a device is currently in."""
         zone_ids = self._device_zones.get(device_id, set())
 
@@ -368,10 +370,8 @@ class GeoManager:
 
     def remove_handler(self, handler: ZoneEventHandler) -> None:
         """Remove zone event handler."""
-        try:
+        with contextlib.suppress(ValueError):
             self._handlers.remove(handler)
-        except ValueError:
-            pass
 
     async def _emit_zone_event(self, event: ZoneEvent) -> None:
         """Emit zone event to handlers and event bus."""
@@ -404,7 +404,7 @@ class GeoManager:
         """Get current device location."""
         return await self._tracker.get_current(device_id)
 
-    async def get_all_locations(self) -> Dict[str, TrackPoint]:
+    async def get_all_locations(self) -> dict[str, TrackPoint]:
         """Get all device locations."""
         return await self._tracker.get_all_current()
 
@@ -412,11 +412,11 @@ class GeoManager:
         self,
         location: GPSCoordinate,
         radius: float,
-    ) -> List[tuple[str, TrackPoint, float]]:
+    ) -> list[tuple[str, TrackPoint, float]]:
         """Find devices near a location."""
         return await self._tracker.get_nearby_devices(location, radius)
 
-    async def get_devices_in_zone(self, zone_id: str) -> List[str]:
+    async def get_devices_in_zone(self, zone_id: str) -> list[str]:
         """Get devices currently in a zone."""
         return [
             device_id

@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import base64
 import logging
-from typing import Optional
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from nexus.api.auth import require_auth
@@ -28,21 +27,21 @@ cloud_router = APIRouter(prefix="/cloud", tags=["cloud"])
 
 class CrackRequest(BaseModel):
     """Crack job request."""
-    
+
     ssid: str = Field(..., description="Target SSID")
     bssid: str = Field(..., description="Target BSSID")
-    hash_data: Optional[str] = Field(None, description="Base64 encoded hash file")
+    hash_data: str | None = Field(None, description="Base64 encoded hash file")
     wordlist: str = Field(default="rockyou.txt", description="Wordlist name")
-    device_id: Optional[str] = Field(None, description="Source device")
+    device_id: str | None = Field(None, description="Source device")
     wait: bool = Field(default=False, description="Wait for result")
 
 
 class CrackJobResponse(BaseModel):
     """Crack job response."""
-    
+
     id: str
     status: str
-    ssid: Optional[str]
+    ssid: str | None
     progress: float
     speed: str
     eta: str
@@ -50,17 +49,17 @@ class CrackJobResponse(BaseModel):
 
 class CrackResultResponse(BaseModel):
     """Crack result response."""
-    
+
     job_id: str
     success: bool
-    password: Optional[str]
+    password: str | None
     duration_seconds: int
-    error: Optional[str]
+    error: str | None
 
 
 class PhishletResponse(BaseModel):
     """Phishlet response."""
-    
+
     name: str
     status: str
     hostname: str
@@ -70,7 +69,7 @@ class PhishletResponse(BaseModel):
 
 class LureRequest(BaseModel):
     """Lure creation request."""
-    
+
     phishlet: str = Field(..., description="Phishlet name")
     campaign: str = Field(default="", description="Campaign name")
     redirect_url: str = Field(default="", description="Post-capture redirect")
@@ -78,7 +77,7 @@ class LureRequest(BaseModel):
 
 class LureResponse(BaseModel):
     """Lure response."""
-    
+
     id: str
     phishlet: str
     url: str
@@ -89,7 +88,7 @@ class LureResponse(BaseModel):
 
 class SessionResponse(BaseModel):
     """Session response."""
-    
+
     id: str
     phishlet: str
     username: str
@@ -120,7 +119,7 @@ def get_cloud_manager(request: Request):
 async def hashcat_status(request: Request, _: str = require_auth):
     """Get Hashcat cloud status."""
     cloud = get_cloud_manager(request)
-    
+
     return {
         "available": cloud.hashcat_available,
         "mock": cloud._hashcat.is_mock if cloud._hashcat else False,
@@ -135,10 +134,10 @@ async def submit_crack_job(
 ):
     """Submit handshake for GPU cracking."""
     cloud = get_cloud_manager(request)
-    
+
     if not cloud.hashcat_available:
         raise HTTPException(status_code=503, detail="Hashcat cloud not available")
-    
+
     # Create temp file from hash data
     hash_file = None
     if crack.hash_data:
@@ -146,10 +145,10 @@ async def submit_crack_job(
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".22000", delete=False) as f:
             f.write(base64.b64decode(crack.hash_data))
             hash_file = Path(f.name)
-    
+
     if not hash_file:
         raise HTTPException(status_code=400, detail="No hash data provided")
-    
+
     try:
         result = await cloud.crack_handshake(
             hash_file=hash_file,
@@ -159,7 +158,7 @@ async def submit_crack_job(
             device_id=crack.device_id,
             wait=crack.wait,
         )
-        
+
         if crack.wait:
             # Return result
             return CrackResultResponse(
@@ -179,7 +178,7 @@ async def submit_crack_job(
                 speed=result.speed,
                 eta=result.eta,
             )
-            
+
     finally:
         # Clean up temp file
         if hash_file and hash_file.exists():
@@ -197,18 +196,18 @@ async def submit_crack_file(
 ):
     """Submit handshake file for cracking."""
     cloud = get_cloud_manager(request)
-    
+
     if not cloud.hashcat_available:
         raise HTTPException(status_code=503, detail="Hashcat cloud not available")
-    
+
     # Save uploaded file
     import tempfile
     content = await file.read()
-    
+
     with tempfile.NamedTemporaryFile(mode="wb", suffix=".22000", delete=False) as f:
         f.write(content)
         hash_file = Path(f.name)
-    
+
     try:
         job = await cloud.crack_handshake(
             hash_file=hash_file,
@@ -217,14 +216,14 @@ async def submit_crack_file(
             wordlist=wordlist,
             wait=False,
         )
-        
+
         return {
             "id": job.id,
             "status": job.status.value,
             "ssid": ssid,
             "filename": file.filename,
         }
-        
+
     finally:
         if hash_file.exists():
             hash_file.unlink()
@@ -233,20 +232,20 @@ async def submit_crack_file(
 @cloud_router.get("/crack/jobs", response_model=list[CrackJobResponse])
 async def list_crack_jobs(
     request: Request,
-    status: Optional[str] = None,
+    status: str | None = None,
     _: str = require_auth,
 ):
     """List crack jobs."""
     cloud = get_cloud_manager(request)
-    
+
     if not cloud.hashcat_available:
         return []
-    
+
     from nexus.cloud.hashcat import JobStatus
-    
+
     status_filter = JobStatus(status) if status else None
     jobs = await cloud.list_crack_jobs(status=status_filter)
-    
+
     return [
         CrackJobResponse(
             id=j.id,
@@ -268,11 +267,11 @@ async def get_crack_job(
 ):
     """Get crack job status."""
     cloud = get_cloud_manager(request)
-    
+
     job = await cloud.get_crack_status(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     return CrackJobResponse(
         id=job.id,
         status=job.status.value,
@@ -291,11 +290,11 @@ async def get_crack_result(
 ):
     """Get crack result."""
     cloud = get_cloud_manager(request)
-    
+
     result = await cloud.get_crack_result(job_id)
     if not result:
         raise HTTPException(status_code=404, detail="Result not found")
-    
+
     return CrackResultResponse(
         job_id=result.job_id,
         success=result.success,
@@ -313,11 +312,11 @@ async def cancel_crack_job(
 ):
     """Cancel a crack job."""
     cloud = get_cloud_manager(request)
-    
+
     success = await cloud.cancel_crack_job(job_id)
     if not success:
         raise HTTPException(status_code=404, detail="Job not found or already finished")
-    
+
     return {"status": "cancelled", "job_id": job_id}
 
 
@@ -330,7 +329,7 @@ async def cancel_crack_job(
 async def evilginx_status(request: Request, _: str = require_auth):
     """Get Evilginx VPS status."""
     cloud = get_cloud_manager(request)
-    
+
     return {
         "available": cloud.evilginx_available,
         "mock": cloud._evilginx.is_mock if cloud._evilginx else False,
@@ -341,9 +340,9 @@ async def evilginx_status(request: Request, _: str = require_auth):
 async def list_phishlets(request: Request, _: str = require_auth):
     """List available phishlets."""
     cloud = get_cloud_manager(request)
-    
+
     phishlets = await cloud.list_phishlets()
-    
+
     return [
         PhishletResponse(
             name=p.name,
@@ -360,16 +359,16 @@ async def list_phishlets(request: Request, _: str = require_auth):
 async def enable_phishlet(
     request: Request,
     name: str,
-    hostname: Optional[str] = None,
+    hostname: str | None = None,
     _: str = require_auth,
 ):
     """Enable a phishlet."""
     cloud = get_cloud_manager(request)
-    
+
     phishlet = await cloud.enable_phishlet(name, hostname)
     if not phishlet:
         raise HTTPException(status_code=404, detail="Phishlet not found or enable failed")
-    
+
     return PhishletResponse(
         name=phishlet.name,
         status=phishlet.status.value,
@@ -387,11 +386,11 @@ async def disable_phishlet(
 ):
     """Disable a phishlet."""
     cloud = get_cloud_manager(request)
-    
+
     success = await cloud.disable_phishlet(name)
     if not success:
         raise HTTPException(status_code=404, detail="Phishlet not found")
-    
+
     return {"status": "disabled", "phishlet": name}
 
 
@@ -403,16 +402,16 @@ async def create_lure(
 ):
     """Create a phishing lure."""
     cloud = get_cloud_manager(request)
-    
+
     result = await cloud.create_phishing_lure(
         phishlet=lure.phishlet,
         campaign=lure.campaign,
         redirect_url=lure.redirect_url,
     )
-    
+
     if not result:
         raise HTTPException(status_code=400, detail="Failed to create lure")
-    
+
     return LureResponse(
         id=result.id,
         phishlet=result.phishlet,
@@ -426,14 +425,14 @@ async def create_lure(
 @cloud_router.get("/lures", response_model=list[LureResponse])
 async def list_lures(
     request: Request,
-    phishlet: Optional[str] = None,
+    phishlet: str | None = None,
     _: str = require_auth,
 ):
     """List phishing lures."""
     cloud = get_cloud_manager(request)
-    
+
     lures = await cloud.list_lures(phishlet)
-    
+
     return [
         LureResponse(
             id=l.id,
@@ -455,25 +454,25 @@ async def delete_lure(
 ):
     """Delete a lure."""
     cloud = get_cloud_manager(request)
-    
+
     success = await cloud.delete_lure(lure_id)
     if not success:
         raise HTTPException(status_code=404, detail="Lure not found")
-    
+
     return {"status": "deleted", "lure_id": lure_id}
 
 
 @cloud_router.get("/sessions", response_model=list[SessionResponse])
 async def list_sessions(
     request: Request,
-    phishlet: Optional[str] = None,
+    phishlet: str | None = None,
     _: str = require_auth,
 ):
     """List captured phishing sessions."""
     cloud = get_cloud_manager(request)
-    
+
     sessions = await cloud.get_phishing_sessions(phishlet)
-    
+
     return [
         SessionResponse(
             id=s.id,
@@ -495,14 +494,14 @@ async def get_session(
 ):
     """Get session details including cookies."""
     cloud = get_cloud_manager(request)
-    
+
     if not cloud._evilginx:
         raise HTTPException(status_code=503, detail="Evilginx not available")
-    
+
     session = await cloud._evilginx.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
+
     return {
         "id": session.id,
         "phishlet": session.phishlet,
@@ -524,11 +523,11 @@ async def get_session_cookies(
 ):
     """Get session cookies for browser import."""
     cloud = get_cloud_manager(request)
-    
+
     cookies = await cloud.get_session_cookies(session_id)
     if not cookies:
         raise HTTPException(status_code=404, detail="Session not found")
-    
+
     return {"cookies": cookies}
 
 
@@ -541,6 +540,6 @@ async def get_session_cookies(
 async def get_cloud_stats(request: Request, _: str = require_auth):
     """Get cloud services statistics."""
     cloud = get_cloud_manager(request)
-    
+
     return await cloud.get_stats()
 

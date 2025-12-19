@@ -11,7 +11,6 @@ import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 import aiosqlite
 
@@ -167,8 +166,8 @@ class MessageStore(BaseStore):
     async def save(self, message: Message) -> None:
         """Save a message."""
         query = """
-        INSERT OR REPLACE INTO messages 
-        (id, src, dst, type, priority, channel, timestamp, ack_required, 
+        INSERT OR REPLACE INTO messages
+        (id, src, dst, type, priority, channel, timestamp, ack_required,
          ack_id, data, retries, created_at, processed_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
@@ -287,7 +286,7 @@ class DeviceStore(BaseStore):
     async def save(self, device: Device) -> None:
         """Save or update a device."""
         query = """
-        INSERT OR REPLACE INTO devices 
+        INSERT OR REPLACE INTO devices
         (id, type, name, status, channels, preferred_channel, last_channel,
          last_seen, last_message_id, version, latitude, longitude, altitude,
          battery, uptime, capabilities, metadata, registered_at, created_at, updated_at)

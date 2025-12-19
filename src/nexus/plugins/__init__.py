@@ -2,14 +2,14 @@
 
 from nexus.plugins.base import (
     Plugin,
+    PluginCapability,
     PluginMetadata,
     PluginState,
-    PluginCapability,
 )
 from nexus.plugins.hooks import (
     Hook,
-    HookType,
     HookRegistry,
+    HookType,
     hook,
 )
 from nexus.plugins.loader import PluginLoader

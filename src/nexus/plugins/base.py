@@ -7,11 +7,11 @@ Defines the interface for Nexus plugins.
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from nexus.config import NexusConfig
@@ -124,8 +124,8 @@ class Plugin(ABC):
     def __init__(self) -> None:
         self._state = PluginState.UNLOADED
         self._config: dict[str, Any] = {}
-        self._nexus_config: "NexusConfig | None" = None
-        self._event_bus: "EventBus | None" = None
+        self._nexus_config: NexusConfig | None = None
+        self._event_bus: EventBus | None = None
         self._context: dict[str, Any] = {}
         self._loaded_at: datetime | None = None
         self._started_at: datetime | None = None
@@ -217,8 +217,8 @@ class Plugin(ABC):
     async def _load(
         self,
         config: dict[str, Any],
-        nexus_config: "NexusConfig",
-        event_bus: "EventBus",
+        nexus_config: NexusConfig,
+        event_bus: EventBus,
     ) -> None:
         """Internal load method."""
         self._state = PluginState.LOADING

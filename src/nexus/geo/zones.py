@@ -6,11 +6,10 @@ Supports circle, polygon, and rectangle zone types.
 
 from __future__ import annotations
 
-import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, List, Tuple
+from typing import Any
 
 from nexus.geo.location import GPSCoordinate, distance_haversine
 
@@ -65,7 +64,7 @@ class Zone(ABC):
         pass
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Zone":
+    def from_dict(cls, data: dict[str, Any]) -> Zone:
         """Deserialize zone from dictionary."""
         zone_type = ZoneType(data["zone_type"])
 
@@ -121,7 +120,7 @@ class CircleZone(Zone):
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CircleZone":
+    def from_dict(cls, data: dict[str, Any]) -> CircleZone:
         """Deserialize from dictionary."""
         return cls(
             id=data["id"],
@@ -145,7 +144,7 @@ class PolygonZone(Zone):
         vertices: List of polygon vertices (must be >= 3)
     """
 
-    vertices: List[GPSCoordinate] = field(default_factory=list)
+    vertices: list[GPSCoordinate] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         """Set zone type and validate."""
@@ -247,7 +246,7 @@ class PolygonZone(Zone):
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "PolygonZone":
+    def from_dict(cls, data: dict[str, Any]) -> PolygonZone:
         """Deserialize from dictionary."""
         return cls(
             id=data["id"],
@@ -331,7 +330,7 @@ class RectangleZone(Zone):
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "RectangleZone":
+    def from_dict(cls, data: dict[str, Any]) -> RectangleZone:
         """Deserialize from dictionary."""
         return cls(
             id=data["id"],

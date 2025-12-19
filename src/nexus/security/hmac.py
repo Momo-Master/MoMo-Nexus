@@ -36,7 +36,7 @@ class AuthenticatedMessage:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AuthenticatedMessage":
+    def from_dict(cls, data: dict[str, Any]) -> AuthenticatedMessage:
         """Create from dictionary."""
         return cls(
             payload=b64decode(data["payload"]),

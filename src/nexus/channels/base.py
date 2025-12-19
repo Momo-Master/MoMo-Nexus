@@ -7,10 +7,13 @@ All channel drivers (LoRa, Cellular, WiFi, etc.) inherit from this.
 from __future__ import annotations
 
 import asyncio
+import builtins
+import contextlib
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Coroutine
 from datetime import datetime
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 from nexus.domain.enums import ChannelStatus, ChannelType
 from nexus.domain.models import Channel, ChannelMetrics, Message
@@ -206,7 +209,7 @@ class BaseChannel(ABC):
 
             return success
 
-        except asyncio.TimeoutError:
+        except builtins.TimeoutError:
             self._handle_failure()
             raise TimeoutError(f"Send timeout on channel {self._name}")
 
@@ -220,10 +223,8 @@ class BaseChannel(ABC):
 
     def remove_message_handler(self, handler: MessageHandler) -> None:
         """Remove a message handler."""
-        try:
+        with contextlib.suppress(ValueError):
             self._message_handlers.remove(handler)
-        except ValueError:
-            pass
 
     async def start_health_check(self) -> None:
         """Start periodic health checks."""
@@ -237,10 +238,8 @@ class BaseChannel(ABC):
         """Stop health checks."""
         if self._health_check_task:
             self._health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._health_check_task
-            except asyncio.CancelledError:
-                pass
             self._health_check_task = None
 
     def to_model(self) -> Channel:

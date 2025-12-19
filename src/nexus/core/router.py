@@ -7,6 +7,7 @@ Handles intelligent message routing across multiple channels.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 from typing import TYPE_CHECKING, Any, Protocol
@@ -14,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from nexus.config import NexusConfig, get_config
 from nexus.core.events import EventBus, EventType, get_event_bus
 from nexus.core.queue import MessageQueue
-from nexus.domain.enums import ChannelStatus, ChannelType, Priority
+from nexus.domain.enums import ChannelType, Priority
 from nexus.domain.models import Message, RoutingResult
 
 if TYPE_CHECKING:
@@ -32,11 +33,11 @@ class RoutingError(Exception):
 class ChannelProvider(Protocol):
     """Protocol for channel provider (for dependency injection)."""
 
-    def get_channel(self, channel_type: ChannelType) -> "BaseChannel | None":
+    def get_channel(self, channel_type: ChannelType) -> BaseChannel | None:
         """Get channel by type."""
         ...
 
-    def get_available_channels(self) -> list["BaseChannel"]:
+    def get_available_channels(self) -> list[BaseChannel]:
         """Get all available channels."""
         ...
 
@@ -60,7 +61,7 @@ class Router:
     ) -> None:
         self._config = config or get_config()
         self._event_bus = event_bus or get_event_bus()
-        self._channels: dict[ChannelType, "BaseChannel"] = {}
+        self._channels: dict[ChannelType, BaseChannel] = {}
         self._queue = MessageQueue(
             max_size=self._config.routing.queue_max_size,
             max_retries=self._config.routing.max_retries,
@@ -80,7 +81,7 @@ class Router:
             "acks_timeout": 0,
         }
 
-    def register_channel(self, channel: "BaseChannel") -> None:
+    def register_channel(self, channel: BaseChannel) -> None:
         """
         Register a channel for routing.
 
@@ -95,11 +96,11 @@ class Router:
         self._channels.pop(channel_type, None)
         logger.info(f"Unregistered channel: {channel_type.value}")
 
-    def get_channel(self, channel_type: ChannelType) -> "BaseChannel | None":
+    def get_channel(self, channel_type: ChannelType) -> BaseChannel | None:
         """Get channel by type."""
         return self._channels.get(channel_type)
 
-    def get_available_channels(self) -> list["BaseChannel"]:
+    def get_available_channels(self) -> list[BaseChannel]:
         """Get all available (up/degraded) channels."""
         return [ch for ch in self._channels.values() if ch.is_available()]
 
@@ -221,7 +222,7 @@ class Router:
                 ack_message = await asyncio.wait_for(ack_future, timeout)
                 self._stats["acks_received"] += 1
                 return result, ack_message
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._stats["acks_timeout"] += 1
                 logger.warning(f"ACK timeout for message {message.id}")
                 result.error = "ACK timeout"
@@ -314,10 +315,8 @@ class Router:
 
         if self._worker_task:
             self._worker_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._worker_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("Router stopped")
 

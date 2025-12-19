@@ -7,11 +7,13 @@ Manages alerts, notifications, and severity tracking.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 from nexus.core.events import EventBus, EventType, get_event_bus
 from nexus.domain.models import Message, generate_id
@@ -106,7 +108,7 @@ class AlertManager:
         self._handlers: list[AlertHandler] = []
 
         # Severity counts
-        self._severity_counts: dict[AlertSeverity, int] = {s: 0 for s in AlertSeverity}
+        self._severity_counts: dict[AlertSeverity, int] = dict.fromkeys(AlertSeverity, 0)
 
     # =========================================================================
     # Alert Creation
@@ -225,10 +227,8 @@ class AlertManager:
 
     def remove_handler(self, handler: AlertHandler) -> None:
         """Remove alert handler."""
-        try:
+        with contextlib.suppress(ValueError):
             self._handlers.remove(handler)
-        except ValueError:
-            pass
 
     async def _notify_handlers(self, alert: Alert) -> None:
         """Notify all handlers of new alert."""

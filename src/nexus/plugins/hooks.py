@@ -7,11 +7,12 @@ Provides extension points for plugins to intercept and modify behavior.
 from __future__ import annotations
 
 import asyncio
-import functools
+import contextlib
 import logging
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Coroutine, TypeVar
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ class Hook:
     enabled: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __lt__(self, other: "Hook") -> bool:
+    def __lt__(self, other: Hook) -> bool:
         """Sort by priority."""
         return self.priority < other.priority
 
@@ -146,10 +147,8 @@ class HookRegistry:
         """Unregister a hook."""
         async with self._lock:
             if hook.hook_type in self._hooks:
-                try:
+                with contextlib.suppress(ValueError):
                     self._hooks[hook.hook_type].remove(hook)
-                except ValueError:
-                    pass
 
     async def unregister_plugin(self, plugin_id: str) -> int:
         """

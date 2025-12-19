@@ -8,11 +8,9 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 import secrets
 from base64 import b64decode, b64encode
 from dataclasses import dataclass
-from typing import Tuple
 
 # Try to use cryptography library, fall back to pure Python
 try:
@@ -119,7 +117,7 @@ class EncryptedPayload:
         return self.nonce + self.ciphertext
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> "EncryptedPayload":
+    def from_bytes(cls, data: bytes) -> EncryptedPayload:
         """Deserialize from bytes."""
         if len(data) < NONCE_SIZE:
             raise ValueError("Data too short")
@@ -133,7 +131,7 @@ class EncryptedPayload:
         return b64encode(self.to_bytes()).decode("ascii")
 
     @classmethod
-    def from_base64(cls, data: str) -> "EncryptedPayload":
+    def from_base64(cls, data: str) -> EncryptedPayload:
         """Decode from base64."""
         return cls.from_bytes(b64decode(data))
 
@@ -272,7 +270,7 @@ class CryptoProvider:
     def _fallback_encrypt(self, plaintext: bytes, nonce: bytes) -> bytes:
         """Simple XOR encryption (NOT SECURE)."""
         stream = self._generate_stream(nonce, len(plaintext) + TAG_SIZE)
-        ciphertext = bytes(a ^ b for a, b in zip(plaintext, stream))
+        ciphertext = bytes(a ^ b for a, b in zip(plaintext, stream, strict=False))
         # Add fake tag
         tag = hmac.new(self._key, nonce + ciphertext, hashlib.sha256).digest()[:TAG_SIZE]
         return ciphertext + tag
@@ -291,7 +289,7 @@ class CryptoProvider:
             raise ValueError("Authentication failed")
 
         stream = self._generate_stream(nonce, len(data))
-        return bytes(a ^ b for a, b in zip(data, stream))
+        return bytes(a ^ b for a, b in zip(data, stream, strict=False))
 
     def _generate_stream(self, nonce: bytes, length: int) -> bytes:
         """Generate key stream (NOT SECURE)."""

@@ -12,7 +12,7 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Type
+from typing import Any
 
 from nexus.plugins.base import Plugin, PluginMetadata
 
@@ -26,7 +26,7 @@ class PluginInfo:
     path: Path
     module_name: str
     metadata: PluginMetadata | None = None
-    plugin_class: Type[Plugin] | None = None
+    plugin_class: type[Plugin] | None = None
     error: str | None = None
 
 
@@ -130,7 +130,7 @@ class PluginLoader:
     # Loading
     # =========================================================================
 
-    def load(self, info: PluginInfo) -> Type[Plugin] | None:
+    def load(self, info: PluginInfo) -> type[Plugin] | None:
         """
         Load a plugin class from PluginInfo.
 
@@ -171,7 +171,7 @@ class PluginLoader:
             info.error = str(e)
             return None
 
-    def load_from_module(self, module_name: str) -> Type[Plugin] | None:
+    def load_from_module(self, module_name: str) -> type[Plugin] | None:
         """
         Load a plugin from an installed Python module.
 
@@ -189,7 +189,7 @@ class PluginLoader:
             logger.error(f"Failed to load module {module_name}: {e}")
             return None
 
-    def load_from_path(self, path: Path) -> Type[Plugin] | None:
+    def load_from_path(self, path: Path) -> type[Plugin] | None:
         """
         Load a plugin from a specific path.
 
@@ -199,10 +199,7 @@ class PluginLoader:
         Returns:
             Plugin class or None
         """
-        if path.is_dir():
-            info = self._discover_package(path)
-        else:
-            info = self._discover_file(path)
+        info = self._discover_package(path) if path.is_dir() else self._discover_file(path)
 
         if info:
             return self.load(info)
@@ -243,7 +240,7 @@ class PluginLoader:
 
         return module
 
-    def _find_plugin_class(self, module: Any) -> Type[Plugin] | None:
+    def _find_plugin_class(self, module: Any) -> type[Plugin] | None:
         """Find Plugin subclass in module."""
         for name in dir(module):
             obj = getattr(module, name)
@@ -268,7 +265,7 @@ class PluginLoader:
         """Get all discovered plugins."""
         return dict(self._discovered)
 
-    def reload(self, module_name: str) -> Type[Plugin] | None:
+    def reload(self, module_name: str) -> type[Plugin] | None:
         """
         Reload a plugin module.
 

@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from nexus.config import NexusConfig, get_config
-from nexus.core.events import EventBus, EventType, get_event_bus
+from nexus.core.events import EventBus, get_event_bus
 from nexus.domain.models import Message
 from nexus.security.crypto import CryptoProvider, derive_key, generate_key
 from nexus.security.envelope import EnvelopeBuilder, SecureEnvelope, SecurityLevel

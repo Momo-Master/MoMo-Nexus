@@ -7,7 +7,6 @@ API key based authentication for Nexus API.
 from __future__ import annotations
 
 import secrets
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader, APIKeyQuery
@@ -24,8 +23,8 @@ def get_api_key(request: Request) -> str:
 
 async def verify_api_key(
     request: Request,
-    api_key_header: Optional[str] = Security(api_key_header),
-    api_key_query: Optional[str] = Security(api_key_query),
+    api_key_header: str | None = Security(api_key_header),
+    api_key_query: str | None = Security(api_key_query),
 ) -> str:
     """
     Verify API key from header or query parameter.

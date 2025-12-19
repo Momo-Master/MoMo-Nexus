@@ -7,8 +7,9 @@ Manages device registration, lookup, and lifecycle.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from nexus.config import NexusConfig, get_config
@@ -104,10 +105,9 @@ class DeviceRegistry:
             return None
 
         # Check whitelist (if not empty)
-        if self._whitelist and device_id not in self._whitelist:
-            if not self._auto_register:
-                logger.warning(f"Device {device_id} not in whitelist, rejecting")
-                return None
+        if self._whitelist and device_id not in self._whitelist and not self._auto_register:
+            logger.warning(f"Device {device_id} not in whitelist, rejecting")
+            return None
 
         # Check if already registered
         existing = await self.get(device_id)
@@ -173,10 +173,8 @@ class DeviceRegistry:
         device_type = DeviceType(data.get("type", "unknown"))
         channels = []
         for ch in data.get("channels", []):
-            try:
+            with contextlib.suppress(ValueError):
                 channels.append(ChannelType(ch))
-            except ValueError:
-                pass
 
         location = None
         if "location" in data:

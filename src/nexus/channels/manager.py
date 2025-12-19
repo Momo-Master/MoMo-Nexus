@@ -8,6 +8,7 @@ and provides unified access to channel operations.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import datetime
 from typing import Any
@@ -16,7 +17,6 @@ from nexus.channels.base import BaseChannel
 from nexus.channels.ble import BLEChannel
 from nexus.channels.cellular import CellularChannel
 from nexus.channels.lora import LoRaChannel
-from nexus.channels.mock import MockChannel
 from nexus.channels.wifi import WiFiChannel
 from nexus.config import NexusConfig, get_config
 from nexus.core.events import EventBus, EventType, get_event_bus
@@ -178,10 +178,8 @@ class ChannelManager:
         # Stop health monitoring
         if self._health_task:
             self._health_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._health_task
-            except asyncio.CancelledError:
-                pass
             self._health_task = None
 
         # Disconnect all channels

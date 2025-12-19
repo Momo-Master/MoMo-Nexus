@@ -7,11 +7,13 @@ Pub/Sub pattern for loose coupling between components.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -112,10 +114,8 @@ class EventBus:
     def unsubscribe(self, event_type: EventType, handler: EventHandler) -> None:
         """Unsubscribe a handler from an event type."""
         if event_type in self._handlers:
-            try:
+            with contextlib.suppress(ValueError):
                 self._handlers[event_type].remove(handler)
-            except ValueError:
-                pass
 
     async def publish(self, event: Event) -> None:
         """

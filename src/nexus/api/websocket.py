@@ -8,11 +8,11 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any, Set
+from typing import Any
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
-from nexus.core.events import Event, EventBus, EventType, get_event_bus
+from nexus.core.events import Event, EventBus, get_event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ class WebSocketManager:
 
     def __init__(self, event_bus: EventBus | None = None) -> None:
         self._event_bus = event_bus or get_event_bus()
-        self._connections: Set[WebSocket] = set()
-        self._subscriptions: dict[WebSocket, Set[str]] = {}
+        self._connections: set[WebSocket] = set()
+        self._subscriptions: dict[WebSocket, set[str]] = {}
         self._lock = asyncio.Lock()
 
         # Subscribe to all events for forwarding

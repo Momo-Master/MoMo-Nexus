@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import logging
 import secrets
-from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,9 +37,9 @@ class NexusAPI:
     def __init__(
         self,
         config: NexusConfig | None = None,
-        router: "Router | None" = None,
-        channel_manager: "ChannelManager | None" = None,
-        fleet_manager: "FleetManager | None" = None,
+        router: Router | None = None,
+        channel_manager: ChannelManager | None = None,
+        fleet_manager: FleetManager | None = None,
     ) -> None:
         self._config = config or get_config()
         self._router = router
@@ -100,10 +99,10 @@ class NexusAPI:
             )
 
         # Import and include routes
-        from nexus.api.routes import router as api_router
-        from nexus.api.websocket import router as ws_router
-        from nexus.api.sync import sync_router
         from nexus.api.cloud import cloud_router
+        from nexus.api.routes import router as api_router
+        from nexus.api.sync import sync_router
+        from nexus.api.websocket import router as ws_router
 
         app.include_router(api_router, prefix="/api")
         app.include_router(sync_router, prefix="/api")
@@ -138,9 +137,9 @@ class NexusAPI:
 
 def create_app(
     config: NexusConfig | None = None,
-    router: "Router | None" = None,
-    channel_manager: "ChannelManager | None" = None,
-    fleet_manager: "FleetManager | None" = None,
+    router: Router | None = None,
+    channel_manager: ChannelManager | None = None,
+    fleet_manager: FleetManager | None = None,
 ) -> FastAPI:
     """
     Create FastAPI application.

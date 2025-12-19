@@ -10,15 +10,15 @@ import asyncio
 import logging
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Deque, Dict, List
+from datetime import datetime
+from typing import Any
 
 from nexus.geo.location import (
     GPSCoordinate,
     Location,
     LocationFix,
-    distance_haversine,
     bearing,
+    distance_haversine,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class TrackPoint:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "TrackPoint":
+    def from_dict(cls, data: dict[str, Any]) -> TrackPoint:
         """Deserialize from dictionary."""
         return cls(
             device_id=data["device_id"],
@@ -84,7 +84,7 @@ class DeviceTrack:
 
     device_id: str
     max_points: int = 1000
-    history: Deque[TrackPoint] = field(default_factory=lambda: deque(maxlen=1000))
+    history: deque[TrackPoint] = field(default_factory=lambda: deque(maxlen=1000))
     current: TrackPoint | None = None
     total_distance: float = 0.0
 
@@ -123,11 +123,11 @@ class DeviceTrack:
             return self.current.timestamp
         return None
 
-    def get_recent(self, count: int = 10) -> List[TrackPoint]:
+    def get_recent(self, count: int = 10) -> list[TrackPoint]:
         """Get recent track points."""
         return list(self.history)[-count:]
 
-    def get_since(self, since: datetime) -> List[TrackPoint]:
+    def get_since(self, since: datetime) -> list[TrackPoint]:
         """Get track points since a timestamp."""
         return [p for p in self.history if p.timestamp >= since]
 
@@ -181,7 +181,7 @@ class LocationTracker:
         self._min_distance = min_distance
         self._max_accuracy = max_accuracy
 
-        self._tracks: Dict[str, DeviceTrack] = {}
+        self._tracks: dict[str, DeviceTrack] = {}
         self._lock = asyncio.Lock()
 
     # =========================================================================
@@ -277,7 +277,7 @@ class LocationTracker:
                 return track.current
         return None
 
-    async def get_all_current(self) -> Dict[str, TrackPoint]:
+    async def get_all_current(self) -> dict[str, TrackPoint]:
         """Get current locations for all devices."""
         async with self._lock:
             return {
@@ -291,7 +291,7 @@ class LocationTracker:
         device_id: str,
         count: int | None = None,
         since: datetime | None = None,
-    ) -> List[TrackPoint]:
+    ) -> list[TrackPoint]:
         """
         Get track history for device.
 
@@ -308,10 +308,7 @@ class LocationTracker:
             if not track:
                 return []
 
-            if since:
-                points = track.get_since(since)
-            else:
-                points = list(track.history)
+            points = track.get_since(since) if since else list(track.history)
 
             if count:
                 points = points[-count:]
@@ -337,7 +334,7 @@ class LocationTracker:
         self,
         location: GPSCoordinate,
         radius: float,
-    ) -> List[tuple[str, TrackPoint, float]]:
+    ) -> list[tuple[str, TrackPoint, float]]:
         """
         Find devices near a location.
 

@@ -7,6 +7,7 @@ Tracks device health, detects offline devices, manages heartbeats.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -15,7 +16,6 @@ from typing import Any
 from nexus.config import NexusConfig, get_config
 from nexus.core.events import EventBus, EventType, get_event_bus
 from nexus.domain.enums import DeviceStatus
-from nexus.domain.models import Device
 from nexus.fleet.registry import DeviceRegistry
 
 logger = logging.getLogger(__name__)
@@ -91,10 +91,8 @@ class HealthMonitor:
 
         if self._monitor_task:
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
             self._monitor_task = None
 
         logger.info("Health monitor stopped")
@@ -244,9 +242,8 @@ class HealthMonitor:
                 score -= 10
 
         # Penalize for high memory
-        if health.memory is not None:
-            if health.memory > 90:
-                score -= 10
+        if health.memory is not None and health.memory > 90:
+            score -= 10
 
         return max(0.0, min(100.0, score))
 
