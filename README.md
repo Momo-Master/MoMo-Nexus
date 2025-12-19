@@ -3,8 +3,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Role-Communication%20Hub-blue?style=for-the-badge" alt="Role">
   <img src="https://img.shields.io/badge/Channels-LoRa%20%7C%204G%20%7C%20WiFi%20%7C%20BLE-green?style=for-the-badge" alt="Channels">
-  <img src="https://img.shields.io/badge/Status-Development-green?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/Version-0.2.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Status-Production%20Ready-brightgreen?style=for-the-badge" alt="Status">
+  <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge" alt="Version">
 </p>
 
 <h3 align="center">The Central Communication Hub for MoMo Ecosystem</h3>
@@ -115,6 +115,25 @@ Message arrives → Nexus evaluates:
 - Message acknowledgment
 - Retry with backoff
 - No single point of failure
+
+### ☁️ Cloud Integration
+
+| Service | Function | Status |
+|---------|----------|--------|
+| **Hashcat GPU** | Remote WPA/WPA2 cracking | ✅ API Ready |
+| **Evilginx VPS** | AiTM phishing campaigns | ✅ API Ready |
+| **WireGuard** | GhostBridge tunnel | ✅ Planned |
+
+### 🔄 Sync API
+
+Endpoints for field device data upload:
+- `/api/sync/handshake` - Captured handshakes
+- `/api/sync/credential` - Stolen credentials  
+- `/api/sync/crack-result` - Cracking results
+- `/api/sync/loot` - Generic exfiltrated data
+- `/api/sync/status` - Device heartbeats
+- `/api/sync/ghost/beacon` - GhostBridge check-ins
+- `/api/sync/mimic/trigger` - Mimic payload events
 
 ---
 
@@ -307,12 +326,14 @@ Message arrives → Nexus evaluates:
 
 ### Supported Devices
 
-| Device | Connection | Protocol |
-|--------|------------|----------|
-| **MoMo** | LoRa / WiFi | Nexus Protocol |
-| **GhostBridge** | 4G / WiFi / LoRa | Nexus Protocol |
-| **Mimic** | WiFi / BLE | Nexus Protocol |
-| **Swarm Nodes** | LoRa Mesh | Meshtastic + Nexus |
+| Device | Connection | Protocol | Status |
+|--------|------------|----------|--------|
+| **MoMo** | LoRa / WiFi | Nexus Protocol | ✅ Integrated |
+| **GhostBridge** | 4G / WiFi / LoRa | Nexus Protocol | ✅ Integrated |
+| **Mimic** | WiFi / BLE | Nexus Protocol | ✅ Integrated |
+| **Swarm** | LoRa Mesh | Meshtastic | ✅ **Merged into Nexus** |
+
+> **Note:** Swarm functionality is now built directly into Nexus via the `nexus.swarm` module. No separate Swarm device needed!
 
 ### Registration Flow
 
@@ -441,10 +462,16 @@ Message arrives → Nexus evaluates:
 |-------|-------------|--------|
 | 0.1.0 | Documentation & Design | ✅ Complete |
 | 0.2.0 | Core Routing Engine | ✅ Complete |
-| 0.3.0 | Channel Drivers (LoRa, 4G) | 📅 Planned |
-| 0.4.0 | Fleet Management | 📅 Planned |
-| 0.5.0 | Web Dashboard | 📅 Planned |
-| 1.0.0 | Production Ready | 📅 Planned |
+| 0.3.0 | Channel Drivers (LoRa, 4G, WiFi, BLE) | ✅ Complete |
+| 0.4.0 | Fleet Management | ✅ Complete |
+| 0.5.0 | GPS & Geofencing | ✅ Complete |
+| 0.6.0 | Security Layer (HMAC, Encryption) | ✅ Complete |
+| 0.7.0 | Plugin System | ✅ Complete |
+| 0.8.0 | Swarm Integration (LoRa Mesh) | ✅ Complete |
+| 0.9.0 | Sync API (MoMo, GhostBridge, Mimic) | ✅ Complete |
+| 1.0.0 | Cloud API (Hashcat, Evilginx) | ✅ Complete |
+| 1.1.0 | Web Dashboard | 📅 Planned |
+| 1.2.0 | Mobile App | 📅 Planned |
 
 ---
 
