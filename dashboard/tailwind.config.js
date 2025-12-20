@@ -11,6 +11,7 @@ export default {
         'nexus-bg': '#0a0a0f',
         'nexus-surface': '#12121a',
         'nexus-elevated': '#1a1a24',
+        'nexus-tertiary': '#24242e',
         'nexus-hover': '#22222e',
         
         // Neon Colors

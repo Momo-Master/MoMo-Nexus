@@ -1,6 +1,6 @@
 # 🚀 MoMo-Nexus Deployment Guide
 
-> **Version:** 0.1.0 | **Last Updated:** 2025-12-18
+> **Version:** 1.1.0 | **Last Updated:** 2025-12-20
 
 ---
 
@@ -114,9 +114,70 @@ pytest tests/ -v
 ### Access
 
 ```
-Web Dashboard: http://localhost:8080
+API Backend:   http://localhost:8080
 API Docs:      http://localhost:8080/docs
 WebSocket:     ws://localhost:8080/ws
+```
+
+### Web Dashboard (Development)
+
+```bash
+# Navigate to dashboard
+cd MoMo-Nexus/dashboard
+
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Start development server
+npm run dev
+# → http://localhost:5173/
+
+# Build for production
+npm run build
+# → dist/ folder
+```
+
+### Web Dashboard (Production)
+
+```bash
+# Build dashboard
+cd dashboard
+npm run build
+
+# Serve with nginx or copy to static folder
+cp -r dist/* /var/www/nexus/
+
+# Or serve with FastAPI (add to nexus config)
+```
+
+```nginx
+# /etc/nginx/sites-available/nexus
+server {
+    listen 80;
+    server_name nexus.local;
+
+    # Dashboard (static files)
+    location / {
+        root /var/www/nexus;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API proxy
+    location /api {
+        proxy_pass http://localhost:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # WebSocket proxy
+    location /ws {
+        proxy_pass http://localhost:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
 ```
 
 ---
@@ -579,5 +640,74 @@ Post-Deployment:
 
 ---
 
-*MoMo-Nexus Deployment Guide v0.1.0*
+## 🌐 Dashboard Deployment
+
+### Option 1: Nginx + Static Files
+
+```bash
+# Build dashboard
+cd MoMo-Nexus/dashboard
+npm run build
+
+# Copy to web root
+sudo mkdir -p /var/www/nexus
+sudo cp -r dist/* /var/www/nexus/
+
+# Configure nginx (see example above)
+sudo ln -s /etc/nginx/sites-available/nexus /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Option 2: FastAPI Static Mount
+
+```python
+# In nexus/api/app.py
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/", StaticFiles(directory="dashboard/dist", html=True), name="dashboard")
+```
+
+### Option 3: Docker Compose
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  nexus-api:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    
+  nexus-dashboard:
+    build: ./dashboard
+    ports:
+      - "3000:80"
+    depends_on:
+      - nexus-api
+```
+
+### Dashboard Environment Variables
+
+```bash
+# .env (dashboard)
+VITE_API_URL=http://localhost:8080
+VITE_WS_URL=ws://localhost:8080/ws
+```
+
+### Pi 4 Performance Tips
+
+| Optimization | Description |
+|--------------|-------------|
+| Disable source maps | `vite build --minify` |
+| Use production build | Never run `npm run dev` on Pi |
+| Enable gzip | nginx `gzip on;` |
+| Browser caching | Set cache headers for static files |
+| Lazy loading | Already implemented for maps |
+
+---
+
+*MoMo-Nexus Deployment Guide v1.1.0*
 

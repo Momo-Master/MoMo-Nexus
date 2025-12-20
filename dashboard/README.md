@@ -13,29 +13,46 @@
 
 ## 🎨 Features
 
+### Pages
+
 | Page | Description |
 |------|-------------|
-| **Dashboard** | Real-time stats, device fleet, activity feed |
+| **Dashboard** | Real-time stats, device fleet, activity feed, map |
 | **Fleet** | Device management with grid/list view |
 | **Captures** | Handshake table with password reveal |
 | **Cracking** | Cloud GPU job queue with progress |
 | **Phishing** | Evilginx sessions & phishlet control |
 | **Analytics** | Charts, trends, device performance |
-| **Settings** | Channels, cloud endpoints, security |
+| **Settings** | Channels, cloud, security, appearance |
+
+### UI Components
+
+| Component | Description |
+|-----------|-------------|
+| **Device Map** | Leaflet + Stadia dark theme, device markers |
+| **Toast Notifications** | Handshake, crack, device status alerts |
+| **Skeleton Loading** | Placeholder UI during data fetch |
+| **Mobile Navigation** | Bottom nav for responsive design |
+| **Device Modal** | Detailed device info popup |
+| **Theme Toggle** | Dark / Light / System mode |
+| **Keyboard Shortcuts** | Ctrl+H, Ctrl+F, Escape, etc. |
+| **Export Functions** | CSV / JSON data export |
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies (use legacy-peer-deps for React 19 compatibility)
+npm install --legacy-peer-deps
 
 # Development server
 npm run dev
+# → http://localhost:5173/
 
 # Build for production
 npm run build
+# → dist/ folder (~600KB gzipped)
 
 # Preview production build
 npm run preview
@@ -181,4 +198,19 @@ MIT License - MoMo Ecosystem
 
 ---
 
-*Nexus Dashboard v1.0.0*
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+H` | Go to Dashboard |
+| `Ctrl+F` | Go to Fleet |
+| `Ctrl+Shift+C` | Go to Captures |
+| `Ctrl+K` | Go to Cracking |
+| `Ctrl+Shift+A` | Go to Analytics |
+| `Ctrl+Shift+S` | Go to Settings |
+| `Ctrl+/` | Focus search |
+| `Escape` | Close modal |
+
+---
+
+*Nexus Dashboard v1.1.0*

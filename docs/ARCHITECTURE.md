@@ -1,6 +1,6 @@
 # 🏗️ MoMo-Nexus Architecture
 
-> **Version:** 0.1.0 | **Last Updated:** 2025-12-18
+> **Version:** 1.1.0 | **Last Updated:** 2025-12-20
 
 ---
 
@@ -366,5 +366,130 @@ CREATE TABLE alerts (
 
 ---
 
-*MoMo-Nexus Architecture v0.1.0*
+## 🌐 Web Dashboard Architecture
+
+### Frontend Stack
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         DASHBOARD ARCHITECTURE                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │                        REACT APPLICATION                            │   │
+│   │                                                                     │   │
+│   │   ┌───────────────────────────────────────────────────────────┐    │   │
+│   │   │                    PRESENTATION LAYER                      │    │   │
+│   │   │                                                           │    │   │
+│   │   │   Pages:                                                  │    │   │
+│   │   │   ├── Dashboard (stats, fleet, activity)                 │    │   │
+│   │   │   ├── Fleet (device management)                          │    │   │
+│   │   │   ├── Captures (handshakes)                              │    │   │
+│   │   │   ├── Cracking (job queue)                               │    │   │
+│   │   │   ├── Phishing (evilginx sessions)                       │    │   │
+│   │   │   ├── Analytics (charts, reports)                        │    │   │
+│   │   │   └── Settings (config, theme)                           │    │   │
+│   │   │                                                           │    │   │
+│   │   │   Components:                                             │    │   │
+│   │   │   ├── Layout (Sidebar, Header, MobileNav)                │    │   │
+│   │   │   ├── UI (StatCard, DeviceCard, Toast, Modal, Skeleton)  │    │   │
+│   │   │   └── Maps (DeviceMap with Leaflet)                      │    │   │
+│   │   │                                                           │    │   │
+│   │   └───────────────────────────────────────────────────────────┘    │   │
+│   │                               │                                     │   │
+│   │   ┌───────────────────────────▼───────────────────────────────┐    │   │
+│   │   │                    STATE & HOOKS                          │    │   │
+│   │   │                                                           │    │   │
+│   │   │   ├── useWebSocket (real-time connection)                │    │   │
+│   │   │   ├── useApi (REST API calls)                            │    │   │
+│   │   │   ├── useTheme (dark/light mode)                         │    │   │
+│   │   │   └── useKeyboardShortcuts (navigation)                  │    │   │
+│   │   │                                                           │    │   │
+│   │   └───────────────────────────────────────────────────────────┘    │   │
+│   │                               │                                     │   │
+│   │   ┌───────────────────────────▼───────────────────────────────┐    │   │
+│   │   │                    DATA LAYER                             │    │   │
+│   │   │                                                           │    │   │
+│   │   │   ├── API Client (fetch wrapper)                         │    │   │
+│   │   │   ├── WebSocket Client (Socket.IO)                       │    │   │
+│   │   │   └── Local Storage (theme, settings)                    │    │   │
+│   │   │                                                           │    │   │
+│   │   └───────────────────────────────────────────────────────────┘    │   │
+│   │                                                                     │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Framework** | React 18 | UI components |
+| **Language** | TypeScript | Type safety |
+| **Build** | Vite | Fast bundling |
+| **Styling** | Tailwind CSS | Utility-first CSS |
+| **Icons** | Lucide React | SVG icons |
+| **Charts** | Recharts | Data visualization |
+| **Maps** | Leaflet + react-leaflet | Device locations |
+| **Routing** | React Router v7 | Page navigation |
+| **Notifications** | react-hot-toast | Toast alerts |
+
+### File Structure
+
+```
+dashboard/
+├── public/
+│   └── nexus.svg              # Logo
+├── src/
+│   ├── components/
+│   │   ├── layout/            # Sidebar, Header, MobileNav
+│   │   └── ui/                # Reusable components
+│   ├── hooks/                 # Custom React hooks
+│   ├── lib/                   # Utilities, export functions
+│   ├── pages/                 # Route components
+│   ├── types/                 # TypeScript definitions
+│   ├── App.tsx                # Root component
+│   ├── main.tsx               # Entry point
+│   └── index.css              # Global styles
+├── package.json
+├── tailwind.config.js
+├── vite.config.ts
+└── tsconfig.json
+```
+
+### API Integration
+
+```typescript
+// REST API endpoints (via FastAPI backend)
+GET  /api/devices              # List all devices
+GET  /api/devices/:id          # Get device details
+POST /api/devices/:id/command  # Send command
+GET  /api/handshakes           # List captures
+GET  /api/jobs                 # Cracking jobs
+GET  /api/sessions             # Phishing sessions
+GET  /api/stats                # Dashboard statistics
+
+// WebSocket events
+ws://localhost:8080/ws
+├── handshake_captured         # New handshake
+├── password_cracked           # Crack complete
+├── device_status              # Online/offline
+├── alert                      # System alerts
+└── job_progress               # Crack progress
+```
+
+### Performance Optimizations
+
+| Optimization | Implementation |
+|--------------|----------------|
+| **Code Splitting** | Lazy-loaded routes |
+| **Chunk Separation** | vendor, charts, maps |
+| **Lazy Components** | DeviceMap loaded on demand |
+| **Skeleton Loading** | Placeholder UI during fetch |
+| **Memoization** | React.memo for static components |
+
+---
+
+*MoMo-Nexus Architecture v1.1.0*
 

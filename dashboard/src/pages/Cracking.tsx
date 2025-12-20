@@ -1,5 +1,4 @@
 import { Cpu, Clock, Zap, CheckCircle } from 'lucide-react';
-import { cn } from '../lib/utils';
 import type { CrackJob } from '../types';
 
 // Mock data

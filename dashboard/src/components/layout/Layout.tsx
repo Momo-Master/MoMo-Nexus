@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { MobileNav } from './MobileNav';
+import { ToastProvider } from '../ui/Toast';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 const pageTitles: Record<string, { title: string; subtitle?: string }> = {
   '/': { title: 'Dashboard', subtitle: 'System Overview' },
@@ -17,10 +20,16 @@ export function Layout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
+  
   const pageInfo = pageTitles[location.pathname] || { title: 'Nexus' };
 
   return (
     <div className="min-h-screen bg-nexus-bg">
+      {/* Toast notifications */}
+      <ToastProvider />
+      
       {/* Sidebar */}
       <Sidebar />
 
@@ -33,7 +42,7 @@ export function Layout() {
       )}
 
       {/* Main content */}
-      <div className="lg:ml-64">
+      <div className="lg:ml-64 pb-20 lg:pb-0">
         <Header
           title={pageInfo.title}
           subtitle={pageInfo.subtitle}
@@ -46,6 +55,9 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileNav />
     </div>
   );
 }

@@ -18,8 +18,16 @@ import {
   Clock,
   HardDrive,
   Trash2,
+  Download,
+  Keyboard,
+  Palette,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
+import { Modal } from '../components/ui/Modal';
+import { KeyboardShortcutsList } from '../hooks/useKeyboardShortcuts';
+import { exportDevices, exportHandshakes, exportCrackJobs, exportSessions } from '../lib/export';
+import { nexusToast } from '../components/ui/Toast';
 
 interface ChannelConfig {
   id: string;
@@ -100,19 +108,21 @@ const channelIcons: Record<string, React.ElementType> = {
   ble: Bluetooth,
 };
 
-type SettingsTab = 'channels' | 'cloud' | 'security' | 'notifications' | 'system';
+type SettingsTab = 'channels' | 'cloud' | 'security' | 'notifications' | 'system' | 'appearance';
 
 export function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('channels');
   const [channels, setChannels] = useState(mockChannels);
   const [showApiKeys, setShowApiKeys] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
     { id: 'channels', label: 'Channels', icon: Radio },
     { id: 'cloud', label: 'Cloud', icon: Cloud },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'system', label: 'System', icon: Database },
   ];
 
@@ -443,6 +453,113 @@ export function Settings() {
           </div>
         </div>
       )}
+
+      {/* Appearance Tab */}
+      {activeTab === 'appearance' && (
+        <div className="space-y-6">
+          <div className="card">
+            <h3 className="font-mono font-semibold text-text-primary mb-4">
+              Theme
+            </h3>
+            <div className="flex items-center justify-between p-4 bg-nexus-elevated rounded-lg">
+              <div>
+                <p className="font-medium">Color Theme</p>
+                <p className="text-sm text-text-muted">
+                  Choose between dark, light, or system theme
+                </p>
+              </div>
+              <ThemeToggle showLabel />
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-mono font-semibold text-text-primary mb-4">
+              Keyboard Shortcuts
+            </h3>
+            <p className="text-sm text-text-muted mb-4">
+              Use keyboard shortcuts for faster navigation
+            </p>
+            <button
+              onClick={() => setShowShortcuts(true)}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Keyboard className="w-4 h-4" />
+              View All Shortcuts
+            </button>
+          </div>
+
+          <div className="card">
+            <h3 className="font-mono font-semibold text-text-primary mb-4">
+              Export Data
+            </h3>
+            <p className="text-sm text-text-muted mb-4">
+              Export captured data to CSV or JSON format
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  // Mock data for demo
+                  exportDevices([
+                    { id: 'momo-001', name: 'MoMo Alpha', type: 'momo', status: 'online', lastSeen: new Date().toISOString(), battery: 85 },
+                    { id: 'ghost-001', name: 'Ghost Pi', type: 'ghostbridge', status: 'online', lastSeen: new Date().toISOString() },
+                  ], 'csv');
+                  nexusToast.success('Devices exported to CSV');
+                }}
+                className="btn-secondary flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Devices
+              </button>
+              <button
+                onClick={() => {
+                  exportHandshakes([
+                    { id: '1', ssid: 'CORP-WiFi', bssid: 'AA:BB:CC:DD:EE:FF', capturedAt: new Date().toISOString(), status: 'cracked', cracked: true, password: 'password123', deviceId: 'momo-001' },
+                  ], 'csv');
+                  nexusToast.success('Handshakes exported to CSV');
+                }}
+                className="btn-secondary flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Handshakes
+              </button>
+              <button
+                onClick={() => {
+                  exportCrackJobs([
+                    { id: '1', ssid: 'CORP-WiFi', status: 'completed', progress: 100, startedAt: new Date().toISOString(), completedAt: new Date().toISOString(), password: 'password123' },
+                  ], 'csv');
+                  nexusToast.success('Crack jobs exported to CSV');
+                }}
+                className="btn-secondary flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Crack Jobs
+              </button>
+              <button
+                onClick={() => {
+                  exportSessions([
+                    { id: '1', phishlet: 'o365', username: 'user@corp.com', ip: '192.168.1.100', capturedAt: new Date().toISOString() },
+                  ], 'csv');
+                  nexusToast.success('Sessions exported to CSV');
+                }}
+                className="btn-secondary flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Sessions
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      <Modal
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        title="Keyboard Shortcuts"
+        size="md"
+      >
+        <KeyboardShortcutsList />
+      </Modal>
 
       {/* System Tab */}
       {activeTab === 'system' && (

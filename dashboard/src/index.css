@@ -264,4 +264,110 @@
       linear-gradient(#12121a, #12121a) padding-box,
       linear-gradient(135deg, #00ff88, #00d4ff) border-box;
   }
+  
+  /* Safe area for mobile bottom nav */
+  .h-safe-area-inset-bottom {
+    height: env(safe-area-inset-bottom);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes leave {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.animate-enter {
+  animation: enter 0.2s ease-out;
+}
+
+.animate-leave {
+  animation: leave 0.15s ease-in forwards;
+}
+
+/* Zoom in animation */
+@keyframes zoom-in-95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-in {
+  animation-duration: 0.2s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: enter;
+}
+
+.zoom-in-95 {
+  animation-name: zoom-in-95;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEAFLET MAP OVERRIDES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.leaflet-container {
+  background: #0a0a0f !important;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+}
+
+.leaflet-popup-tip {
+  background: #12121a !important;
+  border-top: 1px solid #2a2a3a;
+}
+
+.leaflet-control-attribution {
+  background: rgba(18, 18, 26, 0.8) !important;
+  color: #555566 !important;
+  font-size: 10px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #00d4ff !important;
+}
+
+/* Custom marker animations */
+.custom-marker {
+  transition: transform 0.2s ease;
+}
+
+.custom-marker:hover {
+  transform: scale(1.2);
 }

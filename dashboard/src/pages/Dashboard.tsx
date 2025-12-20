@@ -1,8 +1,14 @@
-import { Radio, Fingerprint, KeyRound, AlertTriangle } from 'lucide-react';
+import { useState, lazy, Suspense } from 'react';
+import { Radio, Fingerprint, KeyRound, AlertTriangle, Map as MapIcon } from 'lucide-react';
 import { StatCard } from '../components/ui/StatCard';
 import { ActivityFeed } from '../components/ui/ActivityFeed';
 import { DeviceCard } from '../components/ui/DeviceCard';
+import { DeviceDetailModal } from '../components/ui/DeviceDetailModal';
+import { nexusToast } from '../components/ui/Toast';
 import type { Device, Activity, Stats } from '../types';
+
+// Lazy load map to prevent React 18 Strict Mode double-init issue
+const DeviceMap = lazy(() => import('../components/ui/DeviceMap').then(m => ({ default: m.DeviceMap })));
 
 // Mock data - will be replaced with API calls
 const mockStats: Stats = {
@@ -101,6 +107,21 @@ const mockActivities: Activity[] = [
 ];
 
 export function Dashboard() {
+  const [showMap, setShowMap] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  
+  const handleDeviceClick = (device: Device) => {
+    setSelectedDevice(device);
+  };
+
+  const handleReboot = (deviceId: string) => {
+    nexusToast.info(`Rebooting ${deviceId}...`);
+  };
+
+  const handleScan = (deviceId: string) => {
+    nexusToast.success(`Scan started on ${deviceId}`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
@@ -133,24 +154,56 @@ export function Dashboard() {
         />
       </div>
 
+      {/* Map Toggle */}
+      <div className="flex items-center justify-between">
+        <h2 className="font-mono font-semibold text-text-primary">
+          Fleet Status
+        </h2>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowMap(!showMap)}
+            className={`btn-icon flex items-center gap-2 px-3 py-1.5 rounded ${
+              showMap ? 'bg-neon-cyan/10 text-neon-cyan' : ''
+            }`}
+          >
+            <MapIcon className="w-4 h-4" />
+            {showMap ? 'Hide Map' : 'Show Map'}
+          </button>
+          <a
+            href="/fleet"
+            className="text-sm text-neon-cyan hover:text-neon-cyan/80"
+          >
+            View all →
+          </a>
+        </div>
+      </div>
+
+      {/* Device Map */}
+      {showMap && (
+        <Suspense fallback={
+          <div className="h-64 rounded-lg border border-border-default bg-nexus-surface flex items-center justify-center">
+            <div className="text-text-muted animate-pulse">Loading map...</div>
+          </div>
+        }>
+          <DeviceMap
+            devices={mockDevices}
+            className="h-64"
+            onDeviceClick={handleDeviceClick}
+          />
+        </Suspense>
+      )}
+
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Devices */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-mono font-semibold text-text-primary">
-              Fleet Status
-            </h2>
-            <a
-              href="/fleet"
-              className="text-sm text-neon-cyan hover:text-neon-cyan/80"
-            >
-              View all →
-            </a>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {mockDevices.map((device) => (
-              <DeviceCard key={device.id} device={device} />
+              <DeviceCard 
+                key={device.id} 
+                device={device} 
+                onClick={() => handleDeviceClick(device)}
+              />
             ))}
           </div>
         </div>
@@ -167,19 +220,19 @@ export function Dashboard() {
           Quick Actions
         </h3>
         <div className="flex flex-wrap gap-3">
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={() => nexusToast.info('Scanning networks...')}>
             <span className="flex items-center gap-2">
               <Radio className="w-4 h-4" />
               Scan Networks
             </span>
           </button>
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={() => nexusToast.success('Capture started!')}>
             <span className="flex items-center gap-2">
               <Fingerprint className="w-4 h-4" />
               Start Capture
             </span>
           </button>
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={() => nexusToast.info('Submitting to crack queue...')}>
             <span className="flex items-center gap-2">
               <KeyRound className="w-4 h-4" />
               Submit to Crack
@@ -187,6 +240,15 @@ export function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* Device Detail Modal */}
+      <DeviceDetailModal
+        device={selectedDevice}
+        isOpen={!!selectedDevice}
+        onClose={() => setSelectedDevice(null)}
+        onReboot={handleReboot}
+        onScan={handleScan}
+      />
     </div>
   );
 }
