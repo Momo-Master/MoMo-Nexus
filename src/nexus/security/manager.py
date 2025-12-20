@@ -211,7 +211,7 @@ class SecurityManager:
                 builder = EnvelopeBuilder(keys.hmac_key, keys.encryption_key)
 
         # Convert message to payload
-        payload = message.to_dict()
+        payload = message.model_dump()
 
         # Wrap in envelope
         envelope = builder.wrap(payload, level)
@@ -256,7 +256,7 @@ class SecurityManager:
             payload = builder.unwrap(envelope, verify=True)
 
             # Convert to message
-            message = Message.from_dict(payload)
+            message = Message.model_validate(payload)
 
             logger.debug(f"Verified message {message.id} from envelope")
             return True, message

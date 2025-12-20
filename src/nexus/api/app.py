@@ -62,14 +62,107 @@ class NexusAPI:
         """Get API key."""
         return self._api_key
 
+    def _get_api_description(self) -> str:
+        """Generate API description for OpenAPI docs."""
+        return """
+# MoMo-Nexus API
+
+Central Communication Hub for the MoMo Red Team Ecosystem.
+
+## Overview
+
+Nexus serves as the central hub connecting all MoMo ecosystem devices:
+
+- **MoMo** - Field wardriving device (Pi 5)
+- **GhostBridge** - Network implant (NanoPi R2S)
+- **Mimic** - USB HID attack platform (Pi Zero 2W)
+- **Swarm** - LoRa mesh network (Meshtastic)
+
+## Authentication
+
+All API endpoints require Bearer token authentication:
+
+```
+Authorization: Bearer <api_key>
+```
+
+## Communication Channels
+
+Nexus supports multiple communication channels with automatic failover:
+
+| Channel | Priority | Use Case |
+|---------|----------|----------|
+| LoRa | 1 | Offline, long range |
+| 4G/LTE | 2 | High bandwidth |
+| WiFi | 3 | Local network |
+| BLE | 4 | Short range, low power |
+
+## Real-time Updates
+
+WebSocket endpoint available at `/ws` for real-time event streaming.
+
+## Rate Limits
+
+- API: 100 requests/minute per device
+- WebSocket: 10 messages/second
+- File uploads: 10MB max
+
+---
+
+*MoMo-Nexus - Secure. Stealthy. Synchronized.*
+"""
+
+    def _get_openapi_tags(self) -> list[dict]:
+        """Define OpenAPI tags for API grouping."""
+        return [
+            {
+                "name": "health",
+                "description": "Health check and status endpoints",
+            },
+            {
+                "name": "devices",
+                "description": "Device registration and management",
+            },
+            {
+                "name": "sync",
+                "description": "Data synchronization from field devices (handshakes, credentials, loot)",
+            },
+            {
+                "name": "cloud",
+                "description": "Cloud GPU cracking and Evilginx control",
+            },
+            {
+                "name": "messages",
+                "description": "Inter-device messaging and commands",
+            },
+            {
+                "name": "channels",
+                "description": "Communication channel status and control",
+            },
+            {
+                "name": "websocket",
+                "description": "Real-time WebSocket connections",
+            },
+        ]
+
     def _create_app(self) -> FastAPI:
         """Create and configure FastAPI application."""
         app = FastAPI(
             title="MoMo-Nexus API",
-            description="Central Communication Hub for MoMo Ecosystem",
+            description=self._get_api_description(),
             version=__version__,
-            docs_url="/docs" if not self._config.server.auth_enabled else None,
-            redoc_url="/redoc" if not self._config.server.auth_enabled else None,
+            docs_url="/docs",
+            redoc_url="/redoc",
+            openapi_url="/openapi.json",
+            openapi_tags=self._get_openapi_tags(),
+            license_info={
+                "name": "MIT",
+                "url": "https://opensource.org/licenses/MIT",
+            },
+            contact={
+                "name": "MoMo Team",
+                "url": "https://github.com/momo-team",
+            },
         )
 
         # Store references in app state

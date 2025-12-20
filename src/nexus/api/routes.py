@@ -113,9 +113,17 @@ def get_router(request: Request):
 # =============================================================================
 
 
-@router.get("/status", response_model=StatusResponse)
+@router.get("/status", response_model=StatusResponse, tags=["health"])
 async def get_status(request: Request, _: str = require_auth):
-    """Get system status."""
+    """
+    Get system status.
+    
+    Returns current system status including:
+    - Online/offline devices count
+    - Channel availability
+    - Active alerts
+    - System uptime
+    """
     fleet = request.app.state.fleet_manager
     channels = request.app.state.channel_manager
 
@@ -129,15 +137,34 @@ async def get_status(request: Request, _: str = require_auth):
     }
 
 
-@router.get("/health")
+@router.get("/health", tags=["health"])
 async def health_check():
-    """Health check endpoint (no auth required)."""
+    """
+    Health check endpoint.
+    
+    No authentication required. Use this endpoint for:
+    - Load balancer health checks
+    - Monitoring systems
+    - Uptime verification
+    
+    Returns:
+        status: "ok" if healthy
+        version: Current API version
+    """
     return {"status": "ok", "version": __version__}
 
 
-@router.get("/stats")
+@router.get("/stats", tags=["health"])
 async def get_stats(request: Request, _: str = require_auth):
-    """Get detailed statistics."""
+    """
+    Get detailed system statistics.
+    
+    Returns aggregated stats including:
+    - Total devices registered
+    - Active connections per channel
+    - Message throughput
+    - Capture counts
+    """
     fleet = request.app.state.fleet_manager
     if fleet:
         return await fleet.get_stats()
@@ -149,14 +176,23 @@ async def get_stats(request: Request, _: str = require_auth):
 # =============================================================================
 
 
-@router.get("/devices", response_model=list[DeviceResponse])
+@router.get("/devices", response_model=list[DeviceResponse], tags=["devices"])
 async def list_devices(
     request: Request,
-    status: str | None = Query(None, description="Filter by status"),
-    type: str | None = Query(None, description="Filter by device type"),
+    status: str | None = Query(None, description="Filter by status (online, offline, unknown)"),
+    type: str | None = Query(None, description="Filter by device type (momo, ghostbridge, mimic, relay)"),
     _: str = require_auth,
 ):
-    """List all registered devices."""
+    """
+    List all registered devices.
+    
+    Returns a list of all devices registered with Nexus.
+    Supports filtering by status and device type.
+    
+    Examples:
+    - GET /devices?status=online - All online devices
+    - GET /devices?type=momo - All MoMo field units
+    """
     fleet = get_fleet_manager(request)
 
     if status:
@@ -182,13 +218,21 @@ async def list_devices(
     ]
 
 
-@router.get("/devices/{device_id}", response_model=DeviceResponse)
+@router.get("/devices/{device_id}", response_model=DeviceResponse, tags=["devices"])
 async def get_device(
     request: Request,
     device_id: str,
     _: str = require_auth,
 ):
-    """Get device details."""
+    """
+    Get device details.
+    
+    Returns detailed information about a specific device including:
+    - Current status and last seen time
+    - Battery level and version
+    - Available communication channels
+    - GPS location (if available)
+    """
     fleet = get_fleet_manager(request)
     device = await fleet.registry.get(device_id)
 
@@ -208,13 +252,21 @@ async def get_device(
     )
 
 
-@router.get("/devices/{device_id}/health")
+@router.get("/devices/{device_id}/health", tags=["devices"])
 async def get_device_health(
     request: Request,
     device_id: str,
     _: str = require_auth,
 ):
-    """Get device health information."""
+    """
+    Get device health information.
+    
+    Returns health metrics including:
+    - Health score (0-100)
+    - Heartbeat status
+    - Resource usage (CPU, memory, battery)
+    - Active issues/warnings
+    """
     fleet = get_fleet_manager(request)
     health = await fleet.monitor.get_health(device_id)
 
@@ -235,13 +287,18 @@ async def get_device_health(
     }
 
 
-@router.delete("/devices/{device_id}")
+@router.delete("/devices/{device_id}", tags=["devices"])
 async def unregister_device(
     request: Request,
     device_id: str,
     _: str = require_auth,
 ):
-    """Unregister a device."""
+    """
+    Unregister a device.
+    
+    Removes the device from Nexus fleet management.
+    The device will need to re-register to reconnect.
+    """
     fleet = get_fleet_manager(request)
     result = await fleet.registry.unregister(device_id)
 
@@ -256,17 +313,35 @@ async def unregister_device(
 # =============================================================================
 
 
-@router.post("/devices/{device_id}/command")
+@router.post("/devices/{device_id}/command", tags=["messages"])
 async def send_command(
     request: Request,
     device_id: str,
-    cmd: str = Query(..., description="Command name"),
+    cmd: str = Query(..., description="Command name (scan, capture, stop, reboot, etc.)"),
     params: str | None = Query(None, description="JSON params"),
     wait: bool = Query(True, description="Wait for result"),
     timeout: int = Query(30, description="Timeout seconds"),
     _: str = require_auth,
 ):
-    """Send command to a device."""
+    """
+    Send command to a device.
+    
+    Available commands depend on device type:
+    
+    **MoMo commands:**
+    - `scan` - Start WiFi scanning
+    - `capture` - Begin handshake capture
+    - `stop` - Stop current operation
+    - `reboot` - Restart device
+    
+    **GhostBridge commands:**
+    - `beacon` - Send beacon
+    - `stealth` - Toggle stealth mode
+    
+    **Mimic commands:**
+    - `execute` - Run payload
+    - `switch_mode` - Change USB mode
+    """
     import json
 
     fleet = get_fleet_manager(request)

@@ -249,7 +249,7 @@ class NexusApp:
         await self._channel_manager.start()
 
         # Register channels with router
-        for channel in self._channel_manager.get_all_channels():
+        for channel in self._channel_manager.channels.values():
             self._router.register_channel(channel)
 
         # Start router
@@ -310,7 +310,7 @@ class NexusApp:
             "uptime": self.uptime,
             "started_at": self._started_at.isoformat() if self._started_at else None,
             "channels": self._channel_manager.get_status() if self._channel_manager else {},
-            "router": await self._router.get_stats() if self._router else {},
+            "router": self._router.get_stats() if self._router else {},
             "fleet": await self._fleet_manager.get_stats() if self._fleet_manager else {},
         }
 

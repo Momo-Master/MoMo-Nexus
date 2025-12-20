@@ -1,0 +1,3961 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MoMo-Nexus API",
+    "description": "\n# MoMo-Nexus API\n\nCentral Communication Hub for the MoMo Red Team Ecosystem.\n\n## Overview\n\nNexus serves as the central hub connecting all MoMo ecosystem devices:\n\n- **MoMo** - Field wardriving device (Pi 5)\n- **GhostBridge** - Network implant (NanoPi R2S)\n- **Mimic** - USB HID attack platform (Pi Zero 2W)\n- **Swarm** - LoRa mesh network (Meshtastic)\n\n## Authentication\n\nAll API endpoints require Bearer token authentication:\n\n```\nAuthorization: Bearer <api_key>\n```\n\n## Communication Channels\n\nNexus supports multiple communication channels with automatic failover:\n\n| Channel | Priority | Use Case |\n|---------|----------|----------|\n| LoRa | 1 | Offline, long range |\n| 4G/LTE | 2 | High bandwidth |\n| WiFi | 3 | Local network |\n| BLE | 4 | Short range, low power |\n\n## Real-time Updates\n\nWebSocket endpoint available at `/ws` for real-time event streaming.\n\n## Rate Limits\n\n- API: 100 requests/minute per device\n- WebSocket: 10 messages/second\n- File uploads: 10MB max\n\n---\n\n*MoMo-Nexus - Secure. Stealthy. Synchronized.*\n",
+    "contact": {
+      "name": "MoMo Team",
+      "url": "https://github.com/momo-team"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/status": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Get Status",
+        "description": "Get system status.\n\nReturns current system status including:\n- Online/offline devices count\n- Channel availability\n- Active alerts\n- System uptime",
+        "operationId": "get_status_api_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Check",
+        "description": "Health check endpoint.\n\nNo authentication required. Use this endpoint for:\n- Load balancer health checks\n- Monitoring systems\n- Uptime verification\n\nReturns:\n    status: \"ok\" if healthy\n    version: Current API version",
+        "operationId": "health_check_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Get Stats",
+        "description": "Get detailed system statistics.\n\nReturns aggregated stats including:\n- Total devices registered\n- Active connections per channel\n- Message throughput\n- Capture counts",
+        "operationId": "get_stats_api_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/devices": {
+      "get": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "List Devices",
+        "description": "List all registered devices.\n\nReturns a list of all devices registered with Nexus.\nSupports filtering by status and device type.\n\nExamples:\n- GET /devices?status=online - All online devices\n- GET /devices?type=momo - All MoMo field units",
+        "operationId": "list_devices_api_devices_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status (online, offline, unknown)",
+              "title": "Status"
+            },
+            "description": "Filter by status (online, offline, unknown)"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by device type (momo, ghostbridge, mimic, relay)",
+              "title": "Type"
+            },
+            "description": "Filter by device type (momo, ghostbridge, mimic, relay)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceResponse"
+                  },
+                  "title": "Response List Devices Api Devices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices/{device_id}": {
+      "get": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Get Device",
+        "description": "Get device details.\n\nReturns detailed information about a specific device including:\n- Current status and last seen time\n- Battery level and version\n- Available communication channels\n- GPS location (if available)",
+        "operationId": "get_device_api_devices__device_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Unregister Device",
+        "description": "Unregister a device.\n\nRemoves the device from Nexus fleet management.\nThe device will need to re-register to reconnect.",
+        "operationId": "unregister_device_api_devices__device_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices/{device_id}/health": {
+      "get": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Get Device Health",
+        "description": "Get device health information.\n\nReturns health metrics including:\n- Health score (0-100)\n- Heartbeat status\n- Resource usage (CPU, memory, battery)\n- Active issues/warnings",
+        "operationId": "get_device_health_api_devices__device_id__health_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices/{device_id}/command": {
+      "post": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "Send Command",
+        "description": "Send command to a device.\n\nAvailable commands depend on device type:\n\n**MoMo commands:**\n- `scan` - Start WiFi scanning\n- `capture` - Begin handshake capture\n- `stop` - Stop current operation\n- `reboot` - Restart device\n\n**GhostBridge commands:**\n- `beacon` - Send beacon\n- `stealth` - Toggle stealth mode\n\n**Mimic commands:**\n- `execute` - Run payload\n- `switch_mode` - Change USB mode",
+        "operationId": "send_command_api_devices__device_id__command_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          },
+          {
+            "name": "cmd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Command name (scan, capture, stop, reboot, etc.)",
+              "title": "Cmd"
+            },
+            "description": "Command name (scan, capture, stop, reboot, etc.)"
+          },
+          {
+            "name": "params",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "JSON params",
+              "title": "Params"
+            },
+            "description": "JSON params"
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Wait for result",
+              "default": true,
+              "title": "Wait"
+            },
+            "description": "Wait for result"
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Timeout seconds",
+              "default": 30,
+              "title": "Timeout"
+            },
+            "description": "Timeout seconds"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/command": {
+      "post": {
+        "summary": "Send Command Body",
+        "description": "Send command to a device (POST body).",
+        "operationId": "send_command_body_api_command_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/broadcast": {
+      "post": {
+        "summary": "Broadcast Command",
+        "description": "Broadcast command to multiple devices.",
+        "operationId": "broadcast_command_api_broadcast_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cmd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Command name",
+              "title": "Cmd"
+            },
+            "description": "Command name"
+          },
+          {
+            "name": "device_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by device type",
+              "title": "Device Type"
+            },
+            "description": "Filter by device type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages": {
+      "post": {
+        "summary": "Send Message",
+        "description": "Send a message to a device.",
+        "operationId": "send_message_api_messages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/alerts": {
+      "get": {
+        "summary": "List Alerts",
+        "description": "List alerts.",
+        "operationId": "list_alerts_api_alerts_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "unacknowledged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Unacknowledged"
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlertResponse"
+                  },
+                  "title": "Response List Alerts Api Alerts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{alert_id}": {
+      "get": {
+        "summary": "Get Alert",
+        "description": "Get alert details.",
+        "operationId": "get_alert_api_alerts__alert_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Alert Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{alert_id}/ack": {
+      "post": {
+        "summary": "Acknowledge Alert",
+        "description": "Acknowledge an alert.",
+        "operationId": "acknowledge_alert_api_alerts__alert_id__ack_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Alert Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/ack-all": {
+      "post": {
+        "summary": "Acknowledge All Alerts",
+        "description": "Acknowledge all matching alerts.",
+        "operationId": "acknowledge_all_alerts_api_alerts_ack_all_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Id"
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/channels": {
+      "get": {
+        "summary": "List Channels",
+        "description": "List all channels and their status.",
+        "operationId": "list_channels_api_channels_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/channels/{channel_name}": {
+      "get": {
+        "summary": "Get Channel",
+        "description": "Get channel details.",
+        "operationId": "get_channel_api_channels__channel_name__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Channel Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{channel_name}/restart": {
+      "post": {
+        "summary": "Restart Channel",
+        "description": "Restart a channel.",
+        "operationId": "restart_channel_api_channels__channel_name__restart_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Channel Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "summary": "Get Dashboard Data",
+        "description": "Get data for dashboard display.",
+        "operationId": "get_dashboard_data_api_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/sync/handshake": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Upload Handshake",
+        "description": "Upload captured handshake from MoMo.\n\nSupports 4-way handshake, PMKID, and WPA3 captures.\nOptionally queues for cloud cracking.",
+        "operationId": "upload_handshake_api_sync_handshake_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandshakeUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandshakeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/sync/handshake/file": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Upload Handshake File",
+        "description": "Upload handshake as multipart file.",
+        "operationId": "upload_handshake_file_api_sync_handshake_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_handshake_file_api_sync_handshake_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/sync/handshakes": {
+      "get": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "List Handshakes",
+        "description": "List synced handshakes.",
+        "operationId": "list_handshakes_api_sync_handshakes_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sync/credential": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Upload Credential",
+        "description": "Upload captured credential from Evil Twin / Captive Portal.",
+        "operationId": "upload_credential_api_sync_credential_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/sync/credentials": {
+      "get": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "List Credentials",
+        "description": "List captured credentials.",
+        "operationId": "list_credentials_api_sync_credentials_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sync/crack-result": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Upload Crack Result",
+        "description": "Upload crack result (from local John or cloud Hashcat).",
+        "operationId": "upload_crack_result_api_sync_crack_result_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrackResultUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/sync/loot": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Upload Loot",
+        "description": "Upload generic loot/data.",
+        "operationId": "upload_loot_api_sync_loot_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LootUpload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "List Loot",
+        "description": "List synced loot.",
+        "operationId": "list_loot_api_sync_loot_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Id"
+            }
+          },
+          {
+            "name": "loot_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loot Type"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sync/status": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Update Device Status",
+        "description": "Update device status (heartbeat).",
+        "operationId": "update_device_status_api_sync_status_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceStatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/sync/status/{device_id}": {
+      "get": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Get Device Status",
+        "description": "Get last known device status.",
+        "operationId": "get_device_status_api_sync_status__device_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sync/ghost/beacon": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Ghost Beacon",
+        "description": "Receive GhostBridge beacon.",
+        "operationId": "ghost_beacon_api_sync_ghost_beacon_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GhostBeacon"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/sync/mimic/trigger": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Mimic Trigger",
+        "description": "Record Mimic trigger event.",
+        "operationId": "mimic_trigger_api_sync_mimic_trigger_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MimicTrigger"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/cloud/hashcat/status": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Hashcat Status",
+        "description": "Get Hashcat cloud status.",
+        "operationId": "hashcat_status_api_cloud_hashcat_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/cloud/crack": {
+      "post": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Submit Crack Job",
+        "description": "Submit handshake for GPU cracking.",
+        "operationId": "submit_crack_job_api_cloud_crack_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrackJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/cloud/crack/file": {
+      "post": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Submit Crack File",
+        "description": "Submit handshake file for cracking.",
+        "operationId": "submit_crack_file_api_cloud_crack_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_submit_crack_file_api_cloud_crack_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/cloud/crack/jobs": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "List Crack Jobs",
+        "description": "List crack jobs.",
+        "operationId": "list_crack_jobs_api_cloud_crack_jobs_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrackJobResponse"
+                  },
+                  "title": "Response List Crack Jobs Api Cloud Crack Jobs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/crack/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Get Crack Job",
+        "description": "Get crack job status.",
+        "operationId": "get_crack_job_api_cloud_crack_jobs__job_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrackJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Cancel Crack Job",
+        "description": "Cancel a crack job.",
+        "operationId": "cancel_crack_job_api_cloud_crack_jobs__job_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/crack/jobs/{job_id}/result": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Get Crack Result",
+        "description": "Get crack result.",
+        "operationId": "get_crack_result_api_cloud_crack_jobs__job_id__result_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrackResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/evilginx/status": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Evilginx Status",
+        "description": "Get Evilginx VPS status.",
+        "operationId": "evilginx_status_api_cloud_evilginx_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/cloud/phishlets": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "List Phishlets",
+        "description": "List available phishlets.",
+        "operationId": "list_phishlets_api_cloud_phishlets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PhishletResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Phishlets Api Cloud Phishlets Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    },
+    "/api/cloud/phishlets/{name}/enable": {
+      "post": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Enable Phishlet",
+        "description": "Enable a phishlet.",
+        "operationId": "enable_phishlet_api_cloud_phishlets__name__enable_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "hostname",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hostname"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhishletResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/phishlets/{name}/disable": {
+      "post": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Disable Phishlet",
+        "description": "Disable a phishlet.",
+        "operationId": "disable_phishlet_api_cloud_phishlets__name__disable_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/lures": {
+      "post": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Create Lure",
+        "description": "Create a phishing lure.",
+        "operationId": "create_lure_api_cloud_lures_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "List Lures",
+        "description": "List phishing lures.",
+        "operationId": "list_lures_api_cloud_lures_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "phishlet",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phishlet"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LureResponse"
+                  },
+                  "title": "Response List Lures Api Cloud Lures Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/lures/{lure_id}": {
+      "delete": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Delete Lure",
+        "description": "Delete a lure.",
+        "operationId": "delete_lure_api_cloud_lures__lure_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lure_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lure Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/sessions": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "List Sessions",
+        "description": "List captured phishing sessions.",
+        "operationId": "list_sessions_api_cloud_sessions_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "phishlet",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phishlet"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionResponse"
+                  },
+                  "title": "Response List Sessions Api Cloud Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Get Session",
+        "description": "Get session details including cookies.",
+        "operationId": "get_session_api_cloud_sessions__session_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/sessions/{session_id}/cookies": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Get Session Cookies",
+        "description": "Get session cookies for browser import.",
+        "operationId": "get_session_cookies_api_cloud_sessions__session_id__cookies_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cloud/stats": {
+      "get": {
+        "tags": [
+          "cloud"
+        ],
+        "summary": "Get Cloud Stats",
+        "description": "Get cloud services statistics.",
+        "operationId": "get_cloud_stats_api_cloud_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlertResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "acknowledged": {
+            "type": "boolean",
+            "title": "Acknowledged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "severity",
+          "title",
+          "message",
+          "device_id",
+          "timestamp",
+          "acknowledged"
+        ],
+        "title": "AlertResponse",
+        "description": "Alert response model."
+      },
+      "Body_submit_crack_file_api_cloud_crack_file_post": {
+        "properties": {
+          "ssid": {
+            "type": "string",
+            "title": "Ssid"
+          },
+          "bssid": {
+            "type": "string",
+            "title": "Bssid"
+          },
+          "wordlist": {
+            "type": "string",
+            "title": "Wordlist",
+            "default": "rockyou.txt"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ssid",
+          "bssid",
+          "file"
+        ],
+        "title": "Body_submit_crack_file_api_cloud_crack_file_post"
+      },
+      "Body_upload_handshake_file_api_sync_handshake_file_post": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "ssid": {
+            "type": "string",
+            "title": "Ssid"
+          },
+          "bssid": {
+            "type": "string",
+            "title": "Bssid"
+          },
+          "channel": {
+            "type": "integer",
+            "title": "Channel"
+          },
+          "capture_type": {
+            "type": "string",
+            "title": "Capture Type",
+            "default": "4way"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "ssid",
+          "bssid",
+          "channel",
+          "file"
+        ],
+        "title": "Body_upload_handshake_file_api_sync_handshake_file_post"
+      },
+      "CommandRequest": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id",
+            "description": "Target device ID"
+          },
+          "cmd": {
+            "type": "string",
+            "title": "Cmd",
+            "description": "Command name"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params",
+            "description": "Command parameters"
+          },
+          "timeout": {
+            "type": "integer",
+            "title": "Timeout",
+            "description": "Timeout in seconds",
+            "default": 30
+          },
+          "wait": {
+            "type": "boolean",
+            "title": "Wait",
+            "description": "Wait for result",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "cmd"
+        ],
+        "title": "CommandRequest",
+        "description": "Command request."
+      },
+      "CrackJobResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "ssid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ssid"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress"
+          },
+          "speed": {
+            "type": "string",
+            "title": "Speed"
+          },
+          "eta": {
+            "type": "string",
+            "title": "Eta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "ssid",
+          "progress",
+          "speed",
+          "eta"
+        ],
+        "title": "CrackJobResponse",
+        "description": "Crack job response."
+      },
+      "CrackRequest": {
+        "properties": {
+          "ssid": {
+            "type": "string",
+            "title": "Ssid",
+            "description": "Target SSID"
+          },
+          "bssid": {
+            "type": "string",
+            "title": "Bssid",
+            "description": "Target BSSID"
+          },
+          "hash_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash Data",
+            "description": "Base64 encoded hash file"
+          },
+          "wordlist": {
+            "type": "string",
+            "title": "Wordlist",
+            "description": "Wordlist name",
+            "default": "rockyou.txt"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id",
+            "description": "Source device"
+          },
+          "wait": {
+            "type": "boolean",
+            "title": "Wait",
+            "description": "Wait for result",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "ssid",
+          "bssid"
+        ],
+        "title": "CrackRequest",
+        "description": "Crack job request."
+      },
+      "CrackResultResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "title": "Duration Seconds"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "success",
+          "password",
+          "duration_seconds",
+          "error"
+        ],
+        "title": "CrackResultResponse",
+        "description": "Crack result response."
+      },
+      "CrackResultUpload": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id",
+            "description": "Source device ID"
+          },
+          "handshake_id": {
+            "type": "string",
+            "title": "Handshake Id",
+            "description": "Original handshake ID"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "john, hashcat, cloud",
+            "default": "john"
+          },
+          "wordlist": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wordlist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "handshake_id",
+          "success"
+        ],
+        "title": "CrackResultUpload",
+        "description": "Crack result upload."
+      },
+      "CredentialUpload": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id",
+            "description": "Source device ID"
+          },
+          "ssid": {
+            "type": "string",
+            "title": "Ssid",
+            "description": "Target/fake SSID"
+          },
+          "capture_type": {
+            "type": "string",
+            "title": "Capture Type",
+            "description": "captive, eap, wpa_enterprise",
+            "default": "captive"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "client_mac": {
+            "type": "string",
+            "title": "Client Mac"
+          },
+          "client_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Ip"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          },
+          "gps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "ssid",
+          "client_mac"
+        ],
+        "title": "CredentialUpload",
+        "description": "Credential upload from Evil Twin / Captive Portal."
+      },
+      "DeviceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          },
+          "battery": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "name",
+          "status",
+          "last_seen",
+          "battery",
+          "version",
+          "channels",
+          "location"
+        ],
+        "title": "DeviceResponse",
+        "description": "Device response model."
+      },
+      "DeviceStatusUpdate": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "battery": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "uptime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uptime"
+          },
+          "disk_free": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disk Free"
+          },
+          "memory_free": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Free"
+          },
+          "aps_seen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aps Seen"
+          },
+          "handshakes_captured": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handshakes Captured"
+          },
+          "clients_seen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clients Seen"
+          },
+          "gps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gps"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode",
+            "description": "passive, active, eviltwin"
+          },
+          "current_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id"
+        ],
+        "title": "DeviceStatusUpdate",
+        "description": "Device status update."
+      },
+      "GhostBeacon": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "tunnel_status": {
+            "type": "string",
+            "title": "Tunnel Status",
+            "description": "up, down, unknown",
+            "default": "unknown"
+          },
+          "internal_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Ip"
+          },
+          "external_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ip"
+          },
+          "gateway_mac": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gateway Mac"
+          },
+          "bytes_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bytes In"
+          },
+          "bytes_out": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bytes Out"
+          },
+          "uptime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uptime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id"
+        ],
+        "title": "GhostBeacon",
+        "description": "GhostBridge beacon."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HandshakeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "ssid": {
+            "type": "string",
+            "title": "Ssid"
+          },
+          "bssid": {
+            "type": "string",
+            "title": "Bssid"
+          },
+          "capture_type": {
+            "type": "string",
+            "title": "Capture Type"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "device_id",
+          "ssid",
+          "bssid",
+          "capture_type"
+        ],
+        "title": "HandshakeResponse",
+        "description": "Handshake upload response."
+      },
+      "HandshakeUpload": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id",
+            "description": "Source device ID"
+          },
+          "ssid": {
+            "type": "string",
+            "title": "Ssid",
+            "description": "Target SSID"
+          },
+          "bssid": {
+            "type": "string",
+            "title": "Bssid",
+            "description": "Target BSSID"
+          },
+          "channel": {
+            "type": "integer",
+            "title": "Channel",
+            "description": "WiFi channel"
+          },
+          "capture_type": {
+            "type": "string",
+            "title": "Capture Type",
+            "description": "4way, pmkid, wpa3",
+            "default": "4way"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp",
+            "description": "Capture timestamp ISO8601"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data",
+            "description": "Base64 encoded capture file"
+          },
+          "signal_strength": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Strength",
+            "description": "Signal dBm"
+          },
+          "client_mac": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Mac",
+            "description": "Client MAC for 4way"
+          },
+          "gps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gps",
+            "description": "[lat, lon]"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "ssid",
+          "bssid",
+          "channel"
+        ],
+        "title": "HandshakeUpload",
+        "description": "Handshake upload request."
+      },
+      "LootUpload": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id",
+            "description": "Source device ID"
+          },
+          "loot_type": {
+            "type": "string",
+            "title": "Loot Type",
+            "description": "Type: file, text, binary"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Loot name/filename"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Text content"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data",
+            "description": "Base64 encoded binary"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Where this came from"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "gps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "loot_type",
+          "name"
+        ],
+        "title": "LootUpload",
+        "description": "Generic loot/data upload."
+      },
+      "LureRequest": {
+        "properties": {
+          "phishlet": {
+            "type": "string",
+            "title": "Phishlet",
+            "description": "Phishlet name"
+          },
+          "campaign": {
+            "type": "string",
+            "title": "Campaign",
+            "description": "Campaign name",
+            "default": ""
+          },
+          "redirect_url": {
+            "type": "string",
+            "title": "Redirect Url",
+            "description": "Post-capture redirect",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "phishlet"
+        ],
+        "title": "LureRequest",
+        "description": "Lure creation request."
+      },
+      "LureResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "phishlet": {
+            "type": "string",
+            "title": "Phishlet"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "clicks": {
+            "type": "integer",
+            "title": "Clicks"
+          },
+          "captures": {
+            "type": "integer",
+            "title": "Captures"
+          },
+          "campaign": {
+            "type": "string",
+            "title": "Campaign"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "phishlet",
+          "url",
+          "clicks",
+          "captures",
+          "campaign"
+        ],
+        "title": "LureResponse",
+        "description": "Lure response."
+      },
+      "MessageRequest": {
+        "properties": {
+          "dst": {
+            "type": "string",
+            "title": "Dst",
+            "description": "Destination device ID"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Message type",
+            "default": "data"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority",
+            "description": "Priority level",
+            "default": "normal"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "Message payload"
+          },
+          "ack_required": {
+            "type": "boolean",
+            "title": "Ack Required",
+            "description": "Require acknowledgment",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "dst"
+        ],
+        "title": "MessageRequest",
+        "description": "Message send request."
+      },
+      "MimicTrigger": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "trigger_type": {
+            "type": "string",
+            "title": "Trigger Type",
+            "description": "usb_insert, button, scheduled, remote"
+          },
+          "payload_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload Name"
+          },
+          "target_os": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Os"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "execution_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Time Ms"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "trigger_type",
+          "success"
+        ],
+        "title": "MimicTrigger",
+        "description": "Mimic trigger event."
+      },
+      "PhishletResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "hostname": {
+            "type": "string",
+            "title": "Hostname"
+          },
+          "visits": {
+            "type": "integer",
+            "title": "Visits"
+          },
+          "captures": {
+            "type": "integer",
+            "title": "Captures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "status",
+          "hostname",
+          "visits",
+          "captures"
+        ],
+        "title": "PhishletResponse",
+        "description": "Phishlet response."
+      },
+      "SessionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "phishlet": {
+            "type": "string",
+            "title": "Phishlet"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "has_cookies": {
+            "type": "boolean",
+            "title": "Has Cookies"
+          },
+          "ip_address": {
+            "type": "string",
+            "title": "Ip Address"
+          },
+          "captured_at": {
+            "type": "string",
+            "title": "Captured At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "phishlet",
+          "username",
+          "has_cookies",
+          "ip_address",
+          "captured_at"
+        ],
+        "title": "SessionResponse",
+        "description": "Session response."
+      },
+      "StatusResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "uptime": {
+            "type": "integer",
+            "title": "Uptime"
+          },
+          "devices": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Devices"
+          },
+          "channels": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Channels"
+          },
+          "alerts": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Alerts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "uptime",
+          "devices",
+          "channels",
+          "alerts"
+        ],
+        "title": "StatusResponse",
+        "description": "System status response."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key",
+        "description": "Enter your API key"
+      },
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key in header"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "Health check and status endpoints"
+    },
+    {
+      "name": "devices",
+      "description": "Device registration and management"
+    },
+    {
+      "name": "sync",
+      "description": "Data synchronization from field devices (handshakes, credentials, loot)"
+    },
+    {
+      "name": "cloud",
+      "description": "Cloud GPU cracking and Evilginx control"
+    },
+    {
+      "name": "messages",
+      "description": "Inter-device messaging and commands"
+    },
+    {
+      "name": "channels",
+      "description": "Communication channel status and control"
+    },
+    {
+      "name": "websocket",
+      "description": "Real-time WebSocket connections"
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local development"
+    },
+    {
+      "url": "http://nexus.local:8080",
+      "description": "Nexus on local network"
+    },
+    {
+      "url": "https://nexus.example.com",
+      "description": "Production (replace with actual URL)"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    },
+    {
+      "ApiKeyHeader": []
+    }
+  ]
+}

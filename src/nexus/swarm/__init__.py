@@ -12,7 +12,7 @@ Merged into: MoMo-Nexus v1.1.0
 :license: MIT
 """
 
-from nexus.swarm.bridge import BridgeStats, SwarmBridge
+from nexus.swarm.bridge import BridgeStats, SwarmBridge, SwarmConfig
 from nexus.swarm.manager import SwarmManager
 from nexus.swarm.notifications import (
     NotificationBuilder,
@@ -45,6 +45,7 @@ __all__ = [
     "SequenceTracker",
     # Bridge
     "SwarmBridge",
+    "SwarmConfig",
     "BridgeStats",
     # Manager
     "SwarmManager",

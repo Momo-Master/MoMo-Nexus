@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from nexus.domain.enums import (
     ChannelStatus,
@@ -49,6 +49,8 @@ class Message(BaseModel):
     Used for device-to-nexus, nexus-to-device, and internal routing.
     """
 
+    model_config = ConfigDict(use_enum_values=True)
+
     # Required fields
     v: int = Field(default=1, description="Protocol version")
     id: str = Field(default_factory=generate_id, description="Unique message ID")
@@ -72,9 +74,6 @@ class Message(BaseModel):
     retries: int = Field(default=0, description="Number of send retries")
     created_at: datetime = Field(default_factory=datetime.now)
 
-    class Config:
-        use_enum_values = True
-
     def needs_ack(self) -> bool:
         """Check if this message requires acknowledgment."""
         return self.ack_required and self.type not in (MessageType.ACK, MessageType.NACK)
@@ -92,6 +91,8 @@ class Message(BaseModel):
 
 class Device(BaseModel):
     """Registered device in the fleet."""
+
+    model_config = ConfigDict(use_enum_values=True)
 
     id: str = Field(..., description="Unique device ID (e.g., 'momo-001')")
     type: DeviceType = Field(default=DeviceType.UNKNOWN, description="Device type")
@@ -121,9 +122,6 @@ class Device(BaseModel):
     registered_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.now)
 
-    class Config:
-        use_enum_values = True
-
     def is_online(self) -> bool:
         """Check if device is online."""
         return self.status == DeviceStatus.ONLINE
@@ -151,6 +149,8 @@ class ChannelMetrics(BaseModel):
 class Channel(BaseModel):
     """Communication channel information."""
 
+    model_config = ConfigDict(use_enum_values=True)
+
     name: str = Field(..., description="Channel name (unique)")
     type: ChannelType = Field(..., description="Channel type")
     status: ChannelStatus = Field(default=ChannelStatus.UNKNOWN)
@@ -168,9 +168,6 @@ class Channel(BaseModel):
 
     # Config
     config: dict[str, Any] = Field(default_factory=dict)
-
-    class Config:
-        use_enum_values = True
 
     def is_available(self) -> bool:
         """Check if channel is available for sending."""

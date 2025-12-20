@@ -16,12 +16,12 @@ from nexus.plugins.manager import PluginManager
 # =============================================================================
 
 
-class TestPlugin(Plugin):
-    """A test plugin for unit tests."""
+class SamplePlugin(Plugin):
+    """A sample plugin for unit tests."""
 
     metadata = PluginMetadata(
-        id="test-plugin",
-        name="Test Plugin",
+        id="sample-plugin",
+        name="Sample Plugin",
         version="1.0.0",
         description="A plugin for testing",
         capabilities=[PluginCapability.MESSAGE_HANDLER],
@@ -71,21 +71,21 @@ class TestPluginBase:
 
     def test_plugin_metadata(self) -> None:
         """Test plugin metadata."""
-        plugin = TestPlugin()
-        assert plugin.id == "test-plugin"
-        assert plugin.name == "Test Plugin"
+        plugin = SamplePlugin()
+        assert plugin.id == "sample-plugin"
+        assert plugin.name == "Sample Plugin"
         assert plugin.version == "1.0.0"
 
     def test_plugin_initial_state(self) -> None:
         """Test initial plugin state."""
-        plugin = TestPlugin()
+        plugin = SamplePlugin()
         assert plugin.state == PluginState.UNLOADED
         assert not plugin.is_running
 
     @pytest.mark.asyncio
     async def test_plugin_lifecycle(self) -> None:
         """Test plugin lifecycle methods."""
-        plugin = TestPlugin()
+        plugin = SamplePlugin()
         config = NexusConfig()
         event_bus = EventBus()
 
@@ -112,7 +112,7 @@ class TestPluginBase:
     @pytest.mark.asyncio
     async def test_plugin_config(self) -> None:
         """Test plugin configuration."""
-        plugin = TestPlugin()
+        plugin = SamplePlugin()
         config = NexusConfig()
         event_bus = EventBus()
 
@@ -124,10 +124,10 @@ class TestPluginBase:
 
     def test_plugin_status(self) -> None:
         """Test plugin status."""
-        plugin = TestPlugin()
+        plugin = SamplePlugin()
         status = plugin.get_status()
 
-        assert status["id"] == "test-plugin"
+        assert status["id"] == "sample-plugin"
         assert status["state"] == "unloaded"
 
 
@@ -148,11 +148,11 @@ class TestHookRegistry:
         hook = await registry.register(
             HookType.MESSAGE_RECEIVED,
             handler,
-            "test-plugin",
+            "sample-plugin",
         )
 
         assert hook.hook_type == HookType.MESSAGE_RECEIVED
-        assert hook.plugin_id == "test-plugin"
+        assert hook.plugin_id == "sample-plugin"
 
     @pytest.mark.asyncio
     async def test_call_hooks(self, registry: HookRegistry) -> None:
@@ -247,41 +247,41 @@ class TestPluginManager:
     @pytest.mark.asyncio
     async def test_load_plugin(self, manager: PluginManager) -> None:
         """Test loading a plugin."""
-        plugin = await manager.load(TestPlugin)
+        plugin = await manager.load(SamplePlugin)
 
         assert plugin is not None
-        assert plugin.id == "test-plugin"
+        assert plugin.id == "sample-plugin"
         assert plugin.state == PluginState.LOADED
-        assert manager.is_loaded("test-plugin")
+        assert manager.is_loaded("sample-plugin")
 
     @pytest.mark.asyncio
     async def test_start_plugin(self, manager: PluginManager) -> None:
         """Test starting a plugin."""
-        await manager.load(TestPlugin)
-        result = await manager.start("test-plugin")
+        await manager.load(SamplePlugin)
+        result = await manager.start("sample-plugin")
 
         assert result is True
-        assert manager.is_running("test-plugin")
+        assert manager.is_running("sample-plugin")
 
     @pytest.mark.asyncio
     async def test_stop_plugin(self, manager: PluginManager) -> None:
         """Test stopping a plugin."""
-        await manager.load(TestPlugin)
-        await manager.start("test-plugin")
+        await manager.load(SamplePlugin)
+        await manager.start("sample-plugin")
 
-        result = await manager.stop("test-plugin")
+        result = await manager.stop("sample-plugin")
 
         assert result is True
-        assert not manager.is_running("test-plugin")
+        assert not manager.is_running("sample-plugin")
 
     @pytest.mark.asyncio
     async def test_unload_plugin(self, manager: PluginManager) -> None:
         """Test unloading a plugin."""
-        await manager.load(TestPlugin)
-        result = await manager.unload("test-plugin")
+        await manager.load(SamplePlugin)
+        result = await manager.unload("sample-plugin")
 
         assert result is True
-        assert not manager.is_loaded("test-plugin")
+        assert not manager.is_loaded("sample-plugin")
 
     @pytest.mark.asyncio
     async def test_load_failing_plugin(self, manager: PluginManager) -> None:
@@ -293,18 +293,18 @@ class TestPluginManager:
     @pytest.mark.asyncio
     async def test_hooks_registered(self, manager: PluginManager) -> None:
         """Test that plugin hooks are registered."""
-        await manager.load(TestPlugin)
+        await manager.load(SamplePlugin)
 
         hooks = await manager._hooks.get_hooks(HookType.MESSAGE_RECEIVED)
 
         assert len(hooks) == 1
-        assert hooks[0].plugin_id == "test-plugin"
+        assert hooks[0].plugin_id == "sample-plugin"
 
     @pytest.mark.asyncio
     async def test_hooks_unregistered_on_unload(self, manager: PluginManager) -> None:
         """Test that hooks are unregistered when plugin unloads."""
-        await manager.load(TestPlugin)
-        await manager.unload("test-plugin")
+        await manager.load(SamplePlugin)
+        await manager.unload("sample-plugin")
 
         hooks = await manager._hooks.get_hooks(HookType.MESSAGE_RECEIVED)
 
@@ -313,16 +313,16 @@ class TestPluginManager:
     @pytest.mark.asyncio
     async def test_start_stop_all(self, manager: PluginManager) -> None:
         """Test starting and stopping all plugins."""
-        await manager.load(TestPlugin)
+        await manager.load(SamplePlugin)
 
         start_results = await manager.start_all()
-        assert start_results["test-plugin"] is True
+        assert start_results["sample-plugin"] is True
 
         running = manager.get_running()
         assert len(running) == 1
 
         stop_results = await manager.stop_all()
-        assert stop_results["test-plugin"] is True
+        assert stop_results["sample-plugin"] is True
 
         running = manager.get_running()
         assert len(running) == 0
@@ -330,8 +330,8 @@ class TestPluginManager:
     @pytest.mark.asyncio
     async def test_get_stats(self, manager: PluginManager) -> None:
         """Test getting statistics."""
-        await manager.load(TestPlugin)
-        await manager.start("test-plugin")
+        await manager.load(SamplePlugin)
+        await manager.start("sample-plugin")
 
         stats = await manager.get_stats()
 

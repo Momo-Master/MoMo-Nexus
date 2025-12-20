@@ -10,11 +10,21 @@ import json
 import secrets
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
 from nexus.security.crypto import CryptoProvider, EncryptedPayload
 from nexus.security.hmac import HMACProvider
+
+
+def _json_serializer(obj: Any) -> Any:
+    """Custom JSON serializer for objects not serializable by default."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, Enum):
+        return obj.value
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 class SecurityLevel(str, Enum):
@@ -128,7 +138,7 @@ class EnvelopeBuilder:
         envelope = SecureEnvelope(lvl=level)
 
         # Serialize payload
-        payload_json = json.dumps(payload, separators=(",", ":"))
+        payload_json = json.dumps(payload, separators=(",", ":"), default=_json_serializer)
 
         # Encrypt if required
         if level == SecurityLevel.ENCRYPTED and self._crypto:
