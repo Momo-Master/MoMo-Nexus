@@ -5,6 +5,7 @@
   <img src="https://img.shields.io/badge/Channels-LoRa%20%7C%204G%20%7C%20WiFi%20%7C%20BLE-green?style=for-the-badge" alt="Channels">
   <img src="https://img.shields.io/badge/Status-Production%20Ready-brightgreen?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Tests-343%20Passing-success?style=for-the-badge" alt="Tests">
 </p>
 
 <h3 align="center">The Central Communication Hub for MoMo Ecosystem</h3>
@@ -12,6 +13,12 @@
 <p align="center">
   <strong>Connect Everything. Route Intelligently. Never Lose Contact.</strong><br>
   Multi-Channel • Fleet Management • Smart Routing • Redundancy
+</p>
+
+<p align="center">
+  <a href="https://github.com/Momo-Master/MoMo">MoMo</a> •
+  <a href="https://github.com/Momo-Master/Momo-GhostBridge">GhostBridge</a> •
+  <a href="https://github.com/Momo-Master/MoMo-Mimic">Mimic</a>
 </p>
 
 ---
@@ -498,6 +505,19 @@ npm run build  # → dist/ (production)
 
 ---
 
+## 🌐 MoMo Ecosystem
+
+Nexus is the central hub that connects all MoMo ecosystem devices.
+
+| Project | Description | Platform | Status |
+|---------|-------------|----------|--------|
+| **[MoMo](https://github.com/Momo-Master/MoMo)** | WiFi/BLE/SDR Audit Platform | Pi 5 | ✅ v1.5.2 |
+| **[MoMo-Nexus](https://github.com/Momo-Master/MoMo-Nexus)** | Central Communication Hub | Pi 4 | ✅ v1.0.0 |
+| **[MoMo-GhostBridge](https://github.com/Momo-Master/Momo-GhostBridge)** | Network Implant | NanoPi R2S | ✅ v0.5.0 |
+| **[MoMo-Mimic](https://github.com/Momo-Master/MoMo-Mimic)** | USB Attack Platform | Pi Zero 2W | ✅ v1.0.0 |
+
+---
+
 ## ⚠️ Legal Notice
 
 MoMo-Nexus is designed for authorized security testing and research only. Ensure compliance with local regulations regarding radio frequency usage (LoRa, 4G).
@@ -507,5 +527,12 @@ MoMo-Nexus is designed for authorized security testing and research only. Ensure
 <p align="center">
   <strong>Part of the 🔥 MoMo Ecosystem</strong><br>
   <sub>The Hub That Connects Everything</sub>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Momo-Master/MoMo">MoMo</a> •
+  <a href="https://github.com/Momo-Master/MoMo-Nexus">Nexus</a> •
+  <a href="https://github.com/Momo-Master/Momo-GhostBridge">GhostBridge</a> •
+  <a href="https://github.com/Momo-Master/MoMo-Mimic">Mimic</a>
 </p>
 
