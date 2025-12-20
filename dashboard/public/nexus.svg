@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="neonGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ff88"/>
+      <stop offset="100%" style="stop-color:#00d4ff"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="100" height="100" rx="15" fill="#0a0a0f"/>
+  
+  <!-- Hexagon outline -->
+  <polygon 
+    points="50,10 85,30 85,70 50,90 15,70 15,30" 
+    fill="none" 
+    stroke="url(#neonGlow)" 
+    stroke-width="2"
+    filter="url(#glow)"
+  />
+  
+  <!-- N letter -->
+  <text 
+    x="50" 
+    y="62" 
+    font-family="monospace" 
+    font-size="36" 
+    font-weight="bold" 
+    fill="#00ff88" 
+    text-anchor="middle"
+    filter="url(#glow)"
+  >N</text>
+  
+  <!-- Connection dots -->
+  <circle cx="50" cy="10" r="3" fill="#00ff88"/>
+  <circle cx="85" cy="30" r="3" fill="#00d4ff"/>
+  <circle cx="85" cy="70" r="3" fill="#00d4ff"/>
+  <circle cx="50" cy="90" r="3" fill="#00ff88"/>
+  <circle cx="15" cy="70" r="3" fill="#00d4ff"/>
+  <circle cx="15" cy="30" r="3" fill="#00d4ff"/>
+</svg>
+

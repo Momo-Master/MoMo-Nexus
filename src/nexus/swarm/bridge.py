@@ -16,6 +16,10 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from nexus.swarm.notifications import (
+    NotificationBuilder,
+    OperatorNotification,
+)
 from nexus.swarm.protocol import (
     AckStatus,
     CommandCode,
@@ -140,6 +144,9 @@ class SwarmBridge:
         # Tasks
         self._heartbeat_task: asyncio.Task[None] | None = None
         self._running = False
+        
+        # Notification builder for operator messages
+        self.notify = NotificationBuilder()
 
     # ==================== Lifecycle ====================
 
@@ -319,6 +326,100 @@ class SwarmBridge:
 
         self.stats.last_heartbeat = time.time()
         asyncio.create_task(self._send_swarm_message(msg))
+        return True
+
+    # ==================== Operator Notifications ====================
+
+    async def send_notification(self, notification: OperatorNotification) -> bool:
+        """
+        Send human-readable notification to operator phone.
+
+        Args:
+            notification: OperatorNotification object
+
+        Returns:
+            True if sent successfully
+        
+        Example:
+            >>> await bridge.send_notification(
+            ...     bridge.notify.handshake_captured("CORP-WiFi")
+            ... )
+        """
+        if not self._check_rate_limit():
+            return False
+
+        # Create a simple text message for Meshtastic
+        text = notification.to_text(compact=True)
+        
+        msg = self.builder.alert(
+            EventCode.ALERT,
+            {"text": text, "pri": notification.priority},
+        )
+        
+        success = await self._send_swarm_message(msg)
+        if success:
+            self.stats.alerts_sent += 1
+        return success
+
+    def notify_handshake(self, ssid: str, bssid: str = "") -> bool:
+        """Quick: Send handshake captured notification."""
+        notification = self.notify.handshake_captured(ssid, bssid)
+        asyncio.create_task(self.send_notification(notification))
+        return True
+
+    def notify_cracked(self, ssid: str, password: str) -> bool:
+        """Quick: Send password cracked notification."""
+        notification = self.notify.password_cracked(ssid, password)
+        asyncio.create_task(self.send_notification(notification))
+        return True
+
+    def notify_credential(
+        self, 
+        cred_type: str, 
+        username: str = "", 
+        target: str = ""
+    ) -> bool:
+        """Quick: Send credential captured notification."""
+        notification = self.notify.credential_captured(cred_type, username, target)
+        asyncio.create_task(self.send_notification(notification))
+        return True
+
+    def notify_device_status(self, device_id: str, online: bool = True) -> bool:
+        """Quick: Send device online/offline notification."""
+        if online:
+            notification = self.notify.device_online(device_id)
+        else:
+            notification = self.notify.device_offline(device_id)
+        asyncio.create_task(self.send_notification(notification))
+        return True
+
+    def send_operator_summary(
+        self,
+        handshakes: int = 0,
+        cracked: int = 0,
+        alerts: int = 0
+    ) -> bool:
+        """
+        Send status summary to operator phone.
+        
+        Args:
+            handshakes: Number of handshakes captured
+            cracked: Number of passwords cracked
+            alerts: Number of alerts
+            
+        Returns:
+            True if sent
+            
+        Example output on phone:
+            📊 Durum | D:3 H:12 C:5 A:2
+        """
+        notification = self.notify.status_summary(
+            devices=len(self._devices),
+            handshakes=handshakes,
+            cracked=cracked,
+            alerts=alerts
+        )
+        asyncio.create_task(self.send_notification(notification))
         return True
 
     # ==================== Message Receiving ====================

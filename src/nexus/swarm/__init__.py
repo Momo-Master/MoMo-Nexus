@@ -14,6 +14,16 @@ Merged into: MoMo-Nexus v1.1.0
 
 from nexus.swarm.bridge import BridgeStats, SwarmBridge
 from nexus.swarm.manager import SwarmManager
+from nexus.swarm.notifications import (
+    NotificationBuilder,
+    NotifyIcon,
+    OperatorNotification,
+    notifications,
+    notify_alert,
+    notify_cracked,
+    notify_handshake,
+    notify_status,
+)
 from nexus.swarm.protocol import (
     AckStatus,
     CommandCode,
@@ -38,5 +48,14 @@ __all__ = [
     "BridgeStats",
     # Manager
     "SwarmManager",
+    # Notifications
+    "OperatorNotification",
+    "NotificationBuilder",
+    "NotifyIcon",
+    "notifications",
+    "notify_handshake",
+    "notify_cracked",
+    "notify_status",
+    "notify_alert",
 ]
 
