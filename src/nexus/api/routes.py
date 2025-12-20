@@ -650,3 +650,173 @@ async def get_dashboard_data(request: Request, _: str = require_auth):
         return await fleet.get_dashboard_data()
     return {}
 
+
+# =============================================================================
+# Notification Endpoints
+# =============================================================================
+
+
+class NotificationTestRequest(BaseModel):
+    """Notification test request."""
+
+    message: str = Field(default="Test notification from MoMo Nexus")
+    title: str = Field(default="🧪 Test Notification")
+
+
+class NtfyConfigUpdateRequest(BaseModel):
+    """Ntfy configuration update request."""
+
+    enabled: bool | None = None
+    server_url: str | None = None
+    topic: str | None = None
+    access_token: str | None = None
+    min_severity: str | None = None
+
+
+def get_notification_manager(request: Request):
+    """Get notification manager from app state."""
+    manager = getattr(request.app.state, "notification_manager", None)
+    if not manager:
+        raise HTTPException(status_code=503, detail="Notification manager not initialized")
+    return manager
+
+
+@router.get("/notifications/status", tags=["notifications"])
+async def get_notification_status(
+    request: Request,
+    _: str = require_auth,
+):
+    """
+    Get notification system status.
+    
+    Returns the status of all notification channels:
+    - Ntfy.sh: enabled, server URL, topic
+    - Future: Telegram, Discord, etc.
+    """
+    manager = get_notification_manager(request)
+    
+    return {
+        "ntfy": {
+            "enabled": manager.ntfy_enabled,
+            "server_url": manager._ntfy.config.server_url if manager._ntfy else None,
+            "topic": manager._ntfy.config.topic if manager._ntfy else None,
+            "min_severity": manager._ntfy.config.min_severity if manager._ntfy else None,
+        },
+    }
+
+
+@router.post("/notifications/test", tags=["notifications"])
+async def test_notification(
+    request: Request,
+    body: NotificationTestRequest | None = None,
+    _: str = require_auth,
+):
+    """
+    Send a test notification.
+    
+    Sends a test message through all enabled notification channels.
+    Use this to verify your notification setup is working.
+    
+    Returns:
+        success: Whether any notification was sent successfully
+        channels: Status of each notification channel
+    """
+    manager = get_notification_manager(request)
+    
+    message = body.message if body else "Test notification from MoMo Nexus"
+    title = body.title if body else "🧪 Test Notification"
+    
+    result = await manager.test_ntfy()
+    
+    return {
+        "success": result.get("success", False),
+        "channels": {
+            "ntfy": result,
+        },
+    }
+
+
+@router.post("/notifications/send", tags=["notifications"])
+async def send_notification(
+    request: Request,
+    message: str = Query(..., description="Notification message"),
+    title: str = Query(None, description="Notification title"),
+    severity: str = Query("medium", description="Severity: critical, high, medium, low, info"),
+    _: str = require_auth,
+):
+    """
+    Send a custom notification.
+    
+    Manually trigger a notification through all enabled channels.
+    
+    Args:
+        message: Notification body text
+        title: Notification title (optional)
+        severity: Severity level for priority mapping
+    
+    Returns:
+        success: Whether notification was sent
+    """
+    manager = get_notification_manager(request)
+    
+    success = await manager.notify(
+        message=message,
+        title=title,
+        severity=severity,
+    )
+    
+    return {"success": success, "message": message}
+
+
+@router.put("/notifications/ntfy/config", tags=["notifications"])
+async def update_ntfy_config(
+    request: Request,
+    body: NtfyConfigUpdateRequest,
+    _: str = require_auth,
+):
+    """
+    Update Ntfy.sh configuration.
+    
+    Allows updating Ntfy settings without restarting:
+    - Enable/disable notifications
+    - Change server URL or topic
+    - Update authentication
+    - Adjust minimum severity filter
+    """
+    from nexus.notifications.ntfy import NtfyConfig as NtfyClientConfig
+    
+    manager = get_notification_manager(request)
+    config = request.app.state.config
+    
+    # Update config
+    if body.enabled is not None:
+        config.notifications.ntfy.enabled = body.enabled
+    if body.server_url is not None:
+        config.notifications.ntfy.server_url = body.server_url
+    if body.topic is not None:
+        config.notifications.ntfy.topic = body.topic
+    if body.access_token is not None:
+        config.notifications.ntfy.access_token = body.access_token
+    if body.min_severity is not None:
+        config.notifications.ntfy.min_severity = body.min_severity
+    
+    # Reconfigure manager
+    ntfy_config = NtfyClientConfig(
+        enabled=config.notifications.ntfy.enabled,
+        server_url=config.notifications.ntfy.server_url,
+        topic=config.notifications.ntfy.topic,
+        access_token=config.notifications.ntfy.access_token,
+        min_severity=config.notifications.ntfy.min_severity,
+    )
+    manager.configure_ntfy(ntfy_config)
+    
+    return {
+        "success": True,
+        "config": {
+            "enabled": config.notifications.ntfy.enabled,
+            "server_url": config.notifications.ntfy.server_url,
+            "topic": config.notifications.ntfy.topic,
+            "min_severity": config.notifications.ntfy.min_severity,
+        },
+    }
+

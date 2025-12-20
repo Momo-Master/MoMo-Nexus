@@ -220,6 +220,44 @@ class GeoConfig(BaseModel):
 
 
 # =============================================================================
+# Notification Configuration
+# =============================================================================
+
+
+class NtfyConfigModel(BaseModel):
+    """Ntfy.sh push notification configuration."""
+
+    enabled: bool = False
+    server_url: str = "https://ntfy.sh"  # Public server or self-hosted
+    topic: str = "momo-alerts"
+
+    # Authentication (optional - for private topics)
+    access_token: str | None = None  # Bearer token
+    username: str | None = None  # Basic auth
+    password: str | None = None
+
+    # Default settings
+    default_priority: str = "default"  # max, high, default, low, min
+    default_tags: list[str] = Field(default_factory=lambda: ["momo"])
+
+    # Rate limiting
+    min_interval_seconds: int = 5  # Minimum time between notifications
+
+    # Filtering - only send alerts >= this severity
+    min_severity: str = "medium"  # critical, high, medium, low, info
+
+
+class NotificationConfig(BaseModel):
+    """Notification system configuration."""
+
+    ntfy: NtfyConfigModel = Field(default_factory=NtfyConfigModel)
+
+    # Future: Add more notification channels
+    # telegram: TelegramConfig = Field(default_factory=TelegramConfig)
+    # discord: DiscordConfig = Field(default_factory=DiscordConfig)
+
+
+# =============================================================================
 # Main Configuration
 # =============================================================================
 
@@ -254,6 +292,7 @@ class NexusConfig(BaseSettings):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     geo: GeoConfig = Field(default_factory=GeoConfig)
+    notifications: NotificationConfig = Field(default_factory=NotificationConfig)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> NexusConfig:

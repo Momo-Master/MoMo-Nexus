@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from nexus.channels.manager import ChannelManager
     from nexus.core.router import Router
     from nexus.fleet.manager import FleetManager
+    from nexus.notifications.manager import NotificationManager
 
 logger = logging.getLogger(__name__)
 
@@ -40,17 +41,50 @@ class NexusAPI:
         router: Router | None = None,
         channel_manager: ChannelManager | None = None,
         fleet_manager: FleetManager | None = None,
+        notification_manager: NotificationManager | None = None,
     ) -> None:
         self._config = config or get_config()
         self._router = router
         self._channel_manager = channel_manager
         self._fleet_manager = fleet_manager
+        self._notification_manager = notification_manager
 
         # Generate API key if not configured
         self._api_key = self._config.server.api_key or secrets.token_urlsafe(32)
 
+        # Initialize notification manager if not provided
+        if self._notification_manager is None:
+            self._notification_manager = self._create_notification_manager()
+
+        # Register notification handler with alert manager
+        if self._fleet_manager and self._notification_manager:
+            self._fleet_manager.alerts.add_handler(self._notification_manager.handle_alert)
+
         # Create FastAPI app
         self._app = self._create_app()
+
+    def _create_notification_manager(self) -> NotificationManager:
+        """Create and configure notification manager."""
+        from nexus.notifications.manager import NotificationManager
+        from nexus.notifications.ntfy import NtfyConfig as NtfyClientConfig
+        
+        manager = NotificationManager()
+        
+        # Configure Ntfy if enabled
+        ntfy_cfg = self._config.notifications.ntfy
+        if ntfy_cfg.enabled:
+            manager.configure_ntfy(NtfyClientConfig(
+                enabled=ntfy_cfg.enabled,
+                server_url=ntfy_cfg.server_url,
+                topic=ntfy_cfg.topic,
+                access_token=ntfy_cfg.access_token,
+                username=ntfy_cfg.username,
+                password=ntfy_cfg.password,
+                min_severity=ntfy_cfg.min_severity,
+            ))
+            logger.info(f"Ntfy notifications enabled: {ntfy_cfg.server_url}/{ntfy_cfg.topic}")
+        
+        return manager
 
     @property
     def app(self) -> FastAPI:
@@ -143,6 +177,10 @@ WebSocket endpoint available at `/ws` for real-time event streaming.
                 "name": "websocket",
                 "description": "Real-time WebSocket connections",
             },
+            {
+                "name": "notifications",
+                "description": "Push notification management (Ntfy.sh, etc.)",
+            },
         ]
 
     def _create_app(self) -> FastAPI:
@@ -171,6 +209,7 @@ WebSocket endpoint available at `/ws` for real-time event streaming.
         app.state.router = self._router
         app.state.channel_manager = self._channel_manager
         app.state.fleet_manager = self._fleet_manager
+        app.state.notification_manager = self._notification_manager
         app.state.api_key = self._api_key
 
         # Add CORS middleware
@@ -233,6 +272,7 @@ def create_app(
     router: Router | None = None,
     channel_manager: ChannelManager | None = None,
     fleet_manager: FleetManager | None = None,
+    notification_manager: NotificationManager | None = None,
 ) -> FastAPI:
     """
     Create FastAPI application.
@@ -244,6 +284,7 @@ def create_app(
         router=router,
         channel_manager=channel_manager,
         fleet_manager=fleet_manager,
+        notification_manager=notification_manager,
     )
     return api.app
 

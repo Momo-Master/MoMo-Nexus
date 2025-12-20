@@ -401,24 +401,116 @@ export function Settings() {
       {/* Notifications Tab */}
       {activeTab === 'notifications' && (
         <div className="space-y-6">
+          {/* Ntfy.sh Configuration */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-neon-cyan/10 flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-neon-cyan" />
+                </div>
+                <div>
+                  <h3 className="font-mono font-semibold text-text-primary">Ntfy.sh Push Notifications</h3>
+                  <p className="text-xs text-text-muted">Self-hosted push notifications (OPSEC-safe)</p>
+                </div>
+              </div>
+              <button
+                className={cn(
+                  'relative w-12 h-6 rounded-full transition-all',
+                  'bg-neon-green'
+                )}
+              >
+                <div className="absolute top-1 left-7 w-4 h-4 rounded-full bg-white transition-all" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-text-muted">Server URL</label>
+                <input
+                  type="text"
+                  defaultValue="https://ntfy.sh"
+                  placeholder="https://ntfy.your-server.com"
+                  className="w-full mt-1 px-3 py-2 bg-nexus-bg border border-border-default rounded
+                             text-sm font-mono focus:outline-none focus:border-neon-cyan"
+                />
+                <p className="text-xs text-text-muted mt-1">
+                  Use ntfy.sh (public) or self-host for OPSEC
+                </p>
+              </div>
+              
+              <div>
+                <label className="text-sm text-text-muted">Topic</label>
+                <input
+                  type="text"
+                  defaultValue="momo-alerts"
+                  placeholder="your-secret-topic"
+                  className="w-full mt-1 px-3 py-2 bg-nexus-bg border border-border-default rounded
+                             text-sm font-mono focus:outline-none focus:border-neon-cyan"
+                />
+                <p className="text-xs text-text-muted mt-1">
+                  Use a random topic name for privacy
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-text-muted">Access Token (optional)</label>
+                  <input
+                    type="password"
+                    placeholder="tk_xxxxxxxx"
+                    className="w-full mt-1 px-3 py-2 bg-nexus-bg border border-border-default rounded
+                               text-sm font-mono focus:outline-none focus:border-neon-cyan"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-text-muted">Min. Severity</label>
+                  <select
+                    defaultValue="medium"
+                    className="w-full mt-1 px-3 py-2 bg-nexus-bg border border-border-default rounded
+                               text-sm font-mono focus:outline-none focus:border-neon-cyan"
+                  >
+                    <option value="critical">Critical only</option>
+                    <option value="high">High+</option>
+                    <option value="medium">Medium+</option>
+                    <option value="low">Low+</option>
+                    <option value="info">All</option>
+                  </select>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => nexusToast.success('Test notification sent!')}
+                className="btn-secondary w-full flex items-center justify-center gap-2"
+              >
+                <Bell className="w-4 h-4" />
+                Send Test Notification
+              </button>
+            </div>
+          </div>
+
+          {/* Alert Types */}
           <div className="card">
             <h3 className="font-mono font-semibold text-text-primary mb-4">
-              Notification Preferences
+              Alert Types
             </h3>
             <div className="space-y-4">
               {[
-                { id: 'handshake', label: 'Handshake Captured', enabled: true },
-                { id: 'crack', label: 'Password Cracked', enabled: true },
-                { id: 'device_offline', label: 'Device Offline', enabled: true },
-                { id: 'low_battery', label: 'Low Battery Warning', enabled: true },
-                { id: 'phishing_session', label: 'Phishing Session', enabled: true },
-                { id: 'system_alert', label: 'System Alerts', enabled: false },
+                { id: 'handshake', label: 'Handshake Captured', emoji: '🤝', enabled: true },
+                { id: 'crack', label: 'Password Cracked', emoji: '🔓', enabled: true },
+                { id: 'credential', label: 'Credential Captured', emoji: '🎣', enabled: true },
+                { id: 'device_offline', label: 'Device Offline', emoji: '⚠️', enabled: true },
+                { id: 'low_battery', label: 'Low Battery Warning', emoji: '🔋', enabled: true },
+                { id: 'phishing_session', label: 'Phishing Session', emoji: '🎭', enabled: true },
+                { id: 'system_alert', label: 'System Alerts', emoji: '🚨', enabled: false },
               ].map((notif) => (
                 <div
                   key={notif.id}
                   className="flex items-center justify-between p-3 bg-nexus-elevated rounded-lg"
                 >
-                  <span className="text-sm">{notif.label}</span>
+                  <span className="text-sm">
+                    <span className="mr-2">{notif.emoji}</span>
+                    {notif.label}
+                  </span>
                   <button
                     className={cn(
                       'relative w-12 h-6 rounded-full transition-all',
@@ -437,12 +529,13 @@ export function Settings() {
             </div>
           </div>
 
+          {/* LoRa Notifications */}
           <div className="card">
             <h3 className="font-mono font-semibold text-text-primary mb-4">
-              LoRa Notifications
+              LoRa/Meshtastic Notifications
             </h3>
             <p className="text-sm text-text-muted mb-4">
-              Send notifications to operator phone via LoRa/Meshtastic
+              Send notifications via LoRa mesh network (off-grid)
             </p>
             <div className="flex items-center justify-between p-3 bg-nexus-elevated rounded-lg">
               <span className="text-sm">Enable LoRa Notifications</span>
